@@ -32,7 +32,7 @@ int main(int argc, char **argv)
 	ob = csg_sphere(0, 1, 0, 0.8);
 	oc = csg_intersection(oa, ob);
 
-	csg_add_object(oc);
+	csg_add_object(0, oc);
 
 	csg_render_image(pixels, width, height);
 	save_image(out_fname, pixels, width, height);

@@ -1,4 +1,9 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
 #include "csgray.h"
+#include "matrix.h"
 
 enum {
 	OB_NULL,
@@ -49,9 +54,8 @@ struct camera {
 	float fov;
 };
 
-static camera cam;
-static object *root;
-static float identity[] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+static struct camera cam;
+static csg_object *root;
 
 int csg_init(void)
 {
@@ -97,91 +101,119 @@ int csg_save(const char *fname)
 	return 0;	/* TODO */
 }
 
+#define OBPTR(o) ((struct object*)(o))
+
 void csg_add_object(csg_object *parent, csg_object *child)
 {
-	if(parent->clist) {
-		parent->ctail->next = child;
-		parent->ctail = child;
-	} else {
-		parent->clist = parent->ctail = child;
+	if(!parent) {
+		parent = root;
 	}
-	child->parent = parent;
+
+	if(parent->ob.clist) {
+		parent->ob.ctail->next = OBPTR(child);
+		parent->ob.ctail = OBPTR(child);
+	} else {
+		parent->ob.clist = parent->ob.ctail = OBPTR(child);
+	}
+	child->ob.parent = OBPTR(parent);
 }
 
 void csg_remove_object(csg_object *parent, csg_object *child)
 {
-	csg_object *c = parent->clist;
-	while(c->next) {
-		if(c->next == child) {
-			c->next = child->next;
-			child->next = 0;
-			child->parent = 0;
+	csg_object *c;
+
+	if(!parent) {
+		parent = root;
+	}
+
+	c = (csg_object*)parent->ob.clist;
+	while(c->ob.next) {
+		if(c->ob.next == OBPTR(child)) {
+			c->ob.next = child->ob.next;
+			child->ob.next = 0;
+			child->ob.parent = 0;
 			return;
 		}
-		c = c->next;
+		c = (csg_object*)c->ob.next;
 	}
 }
 
 void csg_free_object(csg_object *o)
 {
-	csg_object *c = o->clist;
+	csg_object *c = (csg_object*)o->ob.clist;
 	while(c) {
 		csg_object *tmp = c;
-		c = c->next;
+		c = (csg_object*)c->ob.next;
 		csg_free_object(tmp);
 	}
 	free(o);
 }
 
-static void init_object(union csg_object *o)
-{
-	o->ob.type = OBJ_NULL;
-	memcpy(o->ob.xform, identity, sizeof identity);
-
-	csg_emission(o, 0, 0, 0);
-	csg_color(o, 1, 1, 1);
-	csg_roughness(o, 1);
-	csg_opacity(o, 1);
-}
-
-csg_object *csg_null(float x, float y, float z)
+static union csg_object *alloc_object(void)
 {
 	csg_object *o;
 
 	if(!(o = calloc(sizeof *o, 1))) {
 		return 0;
 	}
-	init_object(o);
+	o->ob.type = OB_NULL;
+	mat4_identity(o->ob.xform);
+
+	csg_emission(o, 0, 0, 0);
+	csg_color(o, 1, 1, 1);
+	csg_roughness(o, 1);
+	csg_opacity(o, 1);
+
 	return o;
+}
+
+csg_object *csg_null(float x, float y, float z)
+{
+	return alloc_object();
 }
 
 csg_object *csg_sphere(float x, float y, float z, float r)
 {
+	csg_object *o;
+
+	if(!(o = alloc_object())) {
+		return 0;
+	}
+
+	o->sph.rad = r;
+	mat4_translation(o->ob.xform, x, y, z);
+	return o;
 }
 
 csg_object *csg_cylinder(float x0, float y0, float z0, float x1, float y1, float z1, float r)
 {
+	return 0;
 }
 
 csg_object *csg_plane(float x, float y, float z, float nx, float ny, float nz)
 {
+	return 0;
 }
 
 csg_object *csg_box(float x, float y, float z, float xsz, float ysz, float zsz)
 {
+	return 0;
 }
 
 
 csg_object *csg_union(csg_object *a, csg_object *b)
 {
+	return 0;
 }
 
 csg_object *csg_intersection(csg_object *a, csg_object *b)
 {
+	return 0;
 }
 
 csg_object *csg_subtraction(csg_object *a, csg_object *b)
 {
+	return 0;
 }
 
 
