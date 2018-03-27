@@ -350,7 +350,7 @@ static void shade(float *col, struct ray *ray, struct hit *hit)
 		sray.dy = ldir[1];
 		sray.dz = ldir[2];
 
-		if(1) {//!find_intersection(&sray, &tmphit) || tmphit.t > 1.0f) {
+		if(!find_intersection(&sray, &tmphit) || tmphit.t > 1.0f) {
 			if((len = sqrt(ldir[0] * ldir[0] + ldir[1] * ldir[1] + ldir[2] * ldir[2])) != 0.0f) {
 				float s = 1.0f / len;
 				ldir[0] *= s;
@@ -383,16 +383,32 @@ static void background(float *col, struct ray *ray)
 
 static int find_intersection(struct ray *ray, struct hit *best)
 {
+	int idx = 0;
 	csg_object *o;
-	struct hit *hit;
+	struct hinterv *hit, *it;
 
 	best->t = FLT_MAX;
 	best->o = 0;
 
 	o = oblist;
 	while(o) {
-		if((hit = ray_intersect(ray, o)) && hit->t < best->t) {
-			*best = *hit;
+		if((hit = ray_intersect(ray, o))) {
+			it = hit;
+			while(it) {
+				if(it->end[0].t > 1e-6) {
+					idx = 0;
+					break;
+				}
+				if(it->end[1].t > 1e-6) {
+					idx = 1;
+					break;
+				}
+				it = it->next;
+			}
+
+			if(it && it->end[idx].t < best->t) {
+				*best = it->end[idx];
+			}
 		}
 		free_hit_list(hit);
 		o = o->ob.next;

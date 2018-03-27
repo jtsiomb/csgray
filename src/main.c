@@ -48,7 +48,7 @@ int main(int argc, char **argv)
 	csg_color(obj, 0.4, 0.7, 0.4);
 	csg_add_object(obj);
 
-	obj = csg_null(-6, 10, 10);
+	obj = csg_null(-4, 10, 10);
 	csg_emission(obj, 80, 80, 80);
 	csg_add_object(obj);
 
