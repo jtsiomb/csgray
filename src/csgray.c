@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <float.h>
+#include <treestore.h>
 #include "csgimpl.h"
 #include "matrix.h"
 #include "geom.h"
@@ -12,6 +13,7 @@ static int ray_trace(struct ray *ray, float *col);
 static void shade(float *col, struct ray *ray, struct hit *hit);
 static void background(float *col, struct ray *ray);
 static int find_intersection(struct ray *ray, struct hit *best);
+static csg_object *load_object(struct ts_node *node);
 
 static float ambient[3];
 static struct camera cam;
@@ -58,12 +60,38 @@ void csg_fov(float fov)
 
 int csg_load(const char *fname)
 {
-	return 0;	/* TODO */
+	struct ts_node *root = 0, *c;
+
+	if(!(root = ts_load(fname))) {
+		fprintf(stderr, "failed to open %s\n", fname);
+		return -1;
+	}
+	if(strcmp(root->name, "scene") != 0) {
+		fprintf(stderr, "invalid scene file: %s\n", fname);
+		goto err;
+	}
+
+	c = root->child_list;
+	while(c) {
+		csg_object *o = load_object(c);
+		if(!o) goto err;
+		csg_add_object(o);
+		c = c->next;
+	}
+
+	ts_free_tree(root);
+	return 0;
+
+err:
+	if(root) {
+		ts_free_tree(root);
+	}
+	return -1;
 }
 
 int csg_save(const char *fname)
 {
-	return 0;	/* TODO */
+	return -1;	/* TODO */
 }
 
 void csg_add_object(csg_object *o)
@@ -452,4 +480,61 @@ static int find_intersection(struct ray *ray, struct hit *best)
 	}
 
 	return best->o != 0;
+}
+
+static csg_object *load_object(struct ts_node *node)
+{
+	float *apos, *arot, *ascale, *acolor;
+	float aroughness;
+	struct ts_node *c;
+	csg_object *o, *olist = 0, *otail = 0;
+	int num_subobj = 0;
+
+	c = node->child_list;
+	while(c) {
+		if((o = load_object(c))) {
+			if(olist) {
+				otail->ob.next = o;
+				otail = o;
+			} else {
+				olist = otail = o;
+			}
+			++num_subobj;
+		}
+		c = c->next;
+	}
+
+	apos = ts_get_attr_vec(node, "position", 0);
+	arot = ts_get_attr_vec(node, "rotation", 0);
+	ascale = ts_get_attr_vec(node, "scaling", 0);
+	acolor = ts_get_attr_vec(node, "color", 0);
+	aroughness = ts_get_attr_num(node, "roughness", 0);
+
+	if(strcmp(node->name, "null") == 0) {
+		if(num_subobj) {
+			fprintf(stderr, "null can't have sub-objects\n");
+			goto err;
+		}
+		if(!(o = alloc_object(OB_NULL))) {
+			goto err;
+		}
+		return o;
+
+	} else if(strcmp(node->name, "sphere") == 0) {
+		if(num_subobj) {
+			fprintf(stderr, "sphere can't have sub-objects\n");
+			goto err;
+		}
+		if(!(o = alloc_object(OB_SPHERE))) {
+			goto err;
+		}
+	}
+
+err:
+	while(olist) {
+		o = olist;
+		olist = olist->ob.next;
+		csg_free_object(o);
+	}
+	return 0;
 }

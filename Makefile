@@ -4,7 +4,7 @@ dep = $(obj:.o=.d)
 bin = csgray
 
 CFLAGS = -pedantic -Wall -g
-LDFLAGS = -lm
+LDFLAGS = -lm -ltreestore
 
 $(bin): $(obj)
 	$(CC) -o $@ $(obj) $(LDFLAGS)
