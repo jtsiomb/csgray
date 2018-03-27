@@ -12,7 +12,7 @@ static const char *out_fname = "output.ppm";
 
 int main(int argc, char **argv)
 {
-	csg_object *oa, *ob, *oc;
+	csg_object *oa, *ob, *oc, *lt;
 	float *pixels;
 
 	if(parse_opt(argc, argv) == -1) {
@@ -28,11 +28,18 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	oa = csg_sphere(0, 0, 0, 1);
-	ob = csg_sphere(0, 1, 0, 0.8);
-	oc = csg_union(oa, ob);
+	csg_view(0, 0, 5, 0, 0, 0);
 
+	oa = csg_sphere(0, 0, 0, 1);
+	csg_color(oa, 1, 0, 0);
+	ob = csg_sphere(-0.3, 0.7, 0.7, 0.7);
+	csg_color(ob, 0, 0, 1);
+	oc = csg_union(oa, ob);
 	csg_add_object(oc);
+
+	lt = csg_null(-4, 10, 20);
+	csg_emission(lt, 1, 1, 1);
+	csg_add_object(lt);
 
 	csg_render_image(pixels, width, height);
 	save_image(out_fname, pixels, width, height);

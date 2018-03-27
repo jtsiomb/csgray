@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <float.h>
 #include "csgimpl.h"
 #include "matrix.h"
 #include "geom.h"
@@ -12,12 +13,17 @@ static void shade(float *col, struct ray *ray, struct hit *hit);
 static void background(float *col, struct ray *ray);
 static int find_intersection(struct ray *ray, struct hit *best);
 
+static float ambient[3];
 static struct camera cam;
 static csg_object *oblist;
+static csg_object *plights;
 
 int csg_init(void)
 {
 	oblist = 0;
+	plights = 0;
+
+	csg_ambient(0.05, 0.05, 0.05);
 	csg_view(0, 0, 5, 0, 0, 0);
 	csg_fov(50);
 
@@ -64,6 +70,11 @@ void csg_add_object(csg_object *o)
 {
 	o->ob.next = oblist;
 	oblist = o;
+
+	if(o->ob.type == OB_NULL && (o->ob.emr > 0.0f || o->ob.emg > 0.0f || o->ob.emb > 0.0f)) {
+		o->ob.plt_next = plights;
+		plights = o;
+	}
 }
 
 int csg_remove_object(csg_object *o)
@@ -112,7 +123,14 @@ static union csg_object *alloc_object(int type)
 
 csg_object *csg_null(float x, float y, float z)
 {
-	return alloc_object(OB_NULL);
+	csg_object *o;
+
+	if(!(o = alloc_object(OB_NULL))) {
+		return 0;
+	}
+
+	mat4_translation(o->ob.xform, x, y, z);
+	return o;
 }
 
 csg_object *csg_sphere(float x, float y, float z, float r)
@@ -224,6 +242,12 @@ csg_object *csg_subtraction(csg_object *a, csg_object *b)
 	return o;
 }
 
+void csg_ambient(float r, float g, float b)
+{
+	ambient[0] = r;
+	ambient[1] = g;
+	ambient[2] = b;
+}
 
 void csg_emission(csg_object *o, float r, float g, float b)
 {
@@ -273,17 +297,14 @@ void csg_render_image(float *pixels, int width, int height)
 
 static void calc_primary_ray(struct ray *ray, int x, int y, int w, int h, float aspect)
 {
-	float px, py;
+	/* TODO */
+	ray->dx = aspect * ((float)x / (float)w * 2.0f - 1.0f);
+	ray->dy = 1.0f - (float)y / (float)h * 2.0f;
+	ray->dz = -1.0f / tan(cam.fov * 0.5f);
 
-	px = aspect * ((float)x / (float)w * 2.0f - 1.0f);
-	py = 1.0f - (float)y / (float)h * 2.0f;
-
-	ray->x = px;
-	ray->y = py;
+	ray->x = cam.x;
+	ray->y = cam.y;
 	ray->z = cam.z;
-
-	ray->dx = ray->dy = 0.0f;
-	ray->dz = -1.0f;
 }
 
 static int ray_trace(struct ray *ray, float *col)
@@ -299,10 +320,59 @@ static int ray_trace(struct ray *ray, float *col)
 	return 1;
 }
 
+#define NULLXPOS(o)	((o)->ob.xform[12])
+#define NULLYPOS(o)	((o)->ob.xform[13])
+#define NULLZPOS(o)	((o)->ob.xform[14])
+
 static void shade(float *col, struct ray *ray, struct hit *hit)
 {
-	col[0] = 1.0f;
-	col[1] = col[2] = 0.0f;
+	float ndotl, len;
+	csg_object *o, *lt = plights;
+	float dcol[3], scol[3] = {0};
+	float ldir[3];
+	struct ray sray;
+	struct hit tmphit;
+
+	o = hit->o;
+	dcol[0] = ambient[0];
+	dcol[1] = ambient[1];
+	dcol[2] = ambient[2];
+
+	while(lt) {
+		ldir[0] = NULLXPOS(lt) - hit->x;
+		ldir[1] = NULLYPOS(lt) - hit->y;
+		ldir[2] = NULLZPOS(lt) - hit->z;
+
+		sray.x = hit->x;
+		sray.y = hit->y;
+		sray.z = hit->z;
+		sray.dx = ldir[0];
+		sray.dy = ldir[1];
+		sray.dz = ldir[2];
+
+		if(!find_intersection(&sray, &tmphit) || tmphit.t < 1.0f) {
+			if((len = sqrt(ldir[0] * ldir[0] + ldir[1] * ldir[1] + ldir[2] * ldir[2])) != 0.0f) {
+				float s = 1.0f / len;
+				ldir[0] *= s;
+				ldir[1] *= s;
+				ldir[2] *= s;
+			}
+
+			if((ndotl = hit->nx * ldir[0] + hit->ny * ldir[1] + hit->nz * ldir[2]) < 0.0f) {
+				ndotl = 0.0f;
+			}
+
+			dcol[0] += o->ob.r * lt->ob.emr * ndotl;
+			dcol[1] += o->ob.g * lt->ob.emg * ndotl;
+			dcol[2] += o->ob.b * lt->ob.emb * ndotl;
+		}
+
+		lt = lt->ob.next;
+	}
+
+	col[0] = dcol[0] + scol[0];
+	col[1] = dcol[1] + scol[1];
+	col[2] = dcol[2] + scol[2];
 }
 
 static void background(float *col, struct ray *ray)
@@ -315,7 +385,7 @@ static int find_intersection(struct ray *ray, struct hit *best)
 	csg_object *o;
 	struct hit *hit;
 
-	best->t = 1e-6f;
+	best->t = FLT_MAX;
 	best->o = 0;
 
 	o = oblist;
@@ -323,7 +393,7 @@ static int find_intersection(struct ray *ray, struct hit *best)
 		if((hit = ray_intersect(ray, o)) && hit->t < best->t) {
 			*best = *hit;
 		}
-		free_hit(hit);
+		free_hit_list(hit);
 		o = o->ob.next;
 	}
 

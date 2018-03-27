@@ -25,6 +25,7 @@ struct object {
 	float xform[16], inv_xform[16];
 
 	csg_object *next;
+	csg_object *plt_next;
 
 	void (*destroy)(csg_object*);
 };

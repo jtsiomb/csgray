@@ -4,6 +4,8 @@
 #include "geom.h"
 #include "matrix.h"
 
+#define EPSILON		1e-6f
+
 /* TODO custom hit allocator */
 struct hit *alloc_hit(void)
 {
@@ -14,6 +16,20 @@ struct hit *alloc_hit(void)
 	}
 	return hit;
 }
+
+struct hit *alloc_hits(int n)
+{
+	int i;
+	struct hit *list = 0;
+
+	for(i=0; i<n; i++) {
+		struct hit *hit = alloc_hit();
+		hit->next = list;
+		list = hit;
+	}
+	return list;
+}
+
 
 void free_hit(struct hit *hit)
 {
@@ -52,8 +68,9 @@ struct hit *ray_intersect(struct ray *ray, csg_object *o)
 
 struct hit *ray_sphere(struct ray *ray, csg_object *o)
 {
-	float a, b, c, d, sqrt_d, t0, t1, t, sq_rad;
-	struct hit *hit;
+	int i;
+	float a, b, c, d, sqrt_d, t[2], sq_rad, tmp;
+	struct hit *hit, *hitlist;
 	struct ray locray = *ray;
 
 	if(o->sph.rad == 0.0f) {
@@ -68,27 +85,42 @@ struct hit *ray_sphere(struct ray *ray, csg_object *o)
 	c = (locray.x * locray.x + locray.y * locray.y + locray.z * locray.z) - sq_rad;
 
 	d = b * b - 4.0f * a * c;
-	if(d < 1e-6) return 0;
+	if(d < EPSILON) return 0;
 
 	sqrt_d = sqrt(d);
-	t0 = (-b + sqrt_d) / (2.0f * a);
-	t1 = (-b - sqrt_d) / (2.0f * a);
+	t[0] = (-b + sqrt_d) / (2.0f * a);
+	t[1] = (-b - sqrt_d) / (2.0f * a);
 
-	if(t0 < 1e-6) t0 = t1;
-	if(t1 < 1e-6) t1 = t0;
-	t = t0 < t1 ? t0 : t1;
-	if(t < 1e-6) return 0;
+	if(t[0] < EPSILON && t[1] < EPSILON) {
+		return 0;
+	}
 
-	hit = alloc_hit();
-	hit->t = t;
-	hit->x = ray->x + ray->dx * t;
-	hit->y = ray->y + ray->dy * t;
-	hit->z = ray->z + ray->dz * t;
-	hit->nx = hit->x / o->sph.rad;
-	hit->ny = hit->y / o->sph.rad;
-	hit->nz = hit->z / o->sph.rad;
-	hit->o = o;
-	return hit;
+	if(t[1] < t[0]) {
+		tmp = t[0];
+		t[0] = t[1];
+		t[1] = tmp;
+	}
+
+	if(t[0] < EPSILON) t[0] = EPSILON;
+	if(t[1] < EPSILON) t[1] = EPSILON;
+
+	hitlist = hit = alloc_hits(2);
+	for(i=0; i<2; i++) {
+		float c[3] = {0, 0, 0};
+		mat4_xform3(c, o->ob.xform, c);
+
+		hit->t = t[i];
+		hit->x = ray->x + ray->dx * t[i];
+		hit->y = ray->y + ray->dy * t[i];
+		hit->z = ray->z + ray->dz * t[i];
+		hit->nx = (hit->x - c[0]) / o->sph.rad;
+		hit->ny = (hit->y - c[1]) / o->sph.rad;
+		hit->nz = (hit->z - c[2]) / o->sph.rad;
+		hit->o = o;
+
+		hit = hit->next;
+	}
+	return hitlist;
 }
 
 struct hit *ray_cylinder(struct ray *ray, csg_object *o)
@@ -112,13 +144,13 @@ struct hit *ray_plane(struct ray *ray, csg_object *o)
 	vz = o->plane.nz * o->plane.d - locray.z;
 
 	ndotv = o->plane.nx * vx + o->plane.ny * vy + o->plane.nz * vz;
-	if(fabs(ndotv) < 1e-6) return 0;
+	if(fabs(ndotv) < EPSILON) return 0;
 
 	ndotr = o->plane.nx * locray.dx + o->plane.ny * locray.dy + o->plane.nz * locray.dz;
 	t = ndotr / ndotv;
 
-	if(t > 1e-6) {
-		hit = alloc_hit();
+	if(t > EPSILON) {
+		hit = alloc_hits(1);
 		hit->t = t;
 		hit->x = ray->x + ray->dx * t;
 		hit->y = ray->y + ray->dy * t;
@@ -136,16 +168,16 @@ struct hit *ray_csg_un(struct ray *ray, csg_object *o)
 	struct hit *hita, *hitb;
 
 	hita = ray_intersect(ray, o->un.a);
-	hitb = ray_intersect(ray, o->un.a);
+	hitb = ray_intersect(ray, o->un.b);
 
 	if(!hita) return hitb;
 	if(!hitb) return hita;
 
 	if(hita->t < hitb->t) {
-		free_hit(hitb);
+		free_hit_list(hitb);
 		return hita;
 	}
-	free_hit(hita);
+	free_hit_list(hita);
 	return hitb;
 }
 
