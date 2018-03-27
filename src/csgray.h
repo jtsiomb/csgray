@@ -12,8 +12,8 @@ void csg_fov(float fov);
 int csg_load(const char *fname);
 int csg_save(const char *fname);
 
-void csg_add_object(csg_object *parent, csg_object *child);
-void csg_remove_object(csg_object *parent, csg_object *child);
+void csg_add_object(csg_object *o);
+int csg_remove_object(csg_object *o);
 void csg_free_object(csg_object *o);
 
 csg_object *csg_null(float x, float y, float z);
@@ -31,7 +31,7 @@ void csg_color(csg_object *o, float r, float g, float b);
 void csg_roughness(csg_object *o, float r);
 void csg_opacity(csg_object *o, float p);
 
-void csg_render_pixel(int x, int y, float *color);
+void csg_render_pixel(int x, int y, int width, int height, float aspect, float *color);
 void csg_render_image(float *pixels, int width, int height);
 
 #endif	/* CSGRAY_H_ */
