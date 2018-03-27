@@ -1,18 +1,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include <errno.h>
 #include "csgray.h"
+
+#define DFL_WIDTH	800
+#define DFL_HEIGHT	600
+#define DFL_GAMMA	2.2f
+#define DFL_OUTFILE	"output.ppm"
 
 static int save_image(const char *fname, float *pix, int xsz, int ysz);
 static int parse_opt(int argc, char **argv);
 
-static int width = 800, height = 600;
-static const char *out_fname = "output.ppm";
+static int width = DFL_WIDTH, height = DFL_HEIGHT;
+static float inv_gamma = 1.0f / DFL_GAMMA;
+static const char *out_fname = DFL_OUTFILE;
 
 int main(int argc, char **argv)
 {
-	csg_object *oa, *ob, *oc, *lt;
+	csg_object *oa, *ob, *oc, *obj;
 	float *pixels;
 
 	if(parse_opt(argc, argv) == -1) {
@@ -31,15 +38,19 @@ int main(int argc, char **argv)
 	csg_view(0, 0, 5, 0, 0, 0);
 
 	oa = csg_sphere(0, 0, 0, 1);
-	csg_color(oa, 1, 0, 0);
-	ob = csg_sphere(-0.3, 0.7, 0.7, 0.7);
-	csg_color(ob, 0, 0, 1);
-	oc = csg_union(oa, ob);
+	csg_color(oa, 1, 0.1, 0.05);
+	ob = csg_sphere(0.3, 0.7, 0.7, 0.7);
+	csg_color(ob, 0.2, 0.3, 1);
+	oc = csg_subtraction(oa, ob);
 	csg_add_object(oc);
 
-	lt = csg_null(-4, 10, 20);
-	csg_emission(lt, 1, 1, 1);
-	csg_add_object(lt);
+	obj = csg_plane(0, -1, 0, 0, 1, 0);
+	csg_color(obj, 0.4, 0.7, 0.4);
+	csg_add_object(obj);
+
+	obj = csg_null(-6, 10, 10);
+	csg_emission(obj, 80, 80, 80);
+	csg_add_object(obj);
 
 	csg_render_image(pixels, width, height);
 	save_image(out_fname, pixels, width, height);
@@ -58,22 +69,19 @@ static int save_image(const char *fname, float *pix, int xsz, int ysz)
 		return -1;
 	}
 
-	fprintf(fp, "P6\n%d %d\n65535\n", xsz, ysz);
+	fprintf(fp, "P6\n%d %d\n255\n", xsz, ysz);
 
 	for(i=0; i<xsz * ysz; i++) {
-		unsigned int r = *pix++ * 65535.0f;
-		unsigned int g = *pix++ * 65535.0f;
-		unsigned int b = *pix++ * 65535.0f;
+		unsigned int r = pow(*pix++, inv_gamma) * 255.0f;
+		unsigned int g = pow(*pix++, inv_gamma) * 255.0f;
+		unsigned int b = pow(*pix++, inv_gamma) * 255.0f;
 
-		if(r > 0xffff) r = 0xffff;
-		if(g > 0xffff) g = 0xffff;
-		if(b > 0xffff) b = 0xffff;
+		if(r > 255) r = 255;
+		if(g > 255) g = 255;
+		if(b > 255) b = 255;
 
-		fputc(r >> 8, fp);
 		fputc(r, fp);
-		fputc(g >> 8, fp);
 		fputc(g, fp);
-		fputc(b >> 8, fp);
 		fputc(b, fp);
 	}
 	fclose(fp);
@@ -84,9 +92,10 @@ static void print_usage(const char *argv0)
 {
 	printf("Usage: %s [options] <csg file>\n", argv0);
 	printf("Options:\n");
-	printf(" -s <WxH>  output image resolution\n");
-	printf(" -o <file> output image file\n");
-	printf(" -h        print usage information and exit\n");
+	printf(" -s <WxH>   output image resolution (default: %dx%d)\n", DFL_WIDTH, DFL_HEIGHT);
+	printf(" -g <gamma> set output gamma (default: %g)\n", DFL_GAMMA);
+	printf(" -o <file>  output image file (default: %s)\n", DFL_OUTFILE);
+	printf(" -h         print usage information and exit\n");
 }
 
 static int parse_opt(int argc, char **argv)
@@ -102,6 +111,14 @@ static int parse_opt(int argc, char **argv)
 						fprintf(stderr, "-s must be followed by WIDTHxHEIGHT\n");
 						return -1;
 					}
+					break;
+
+				case 'g':
+					if((inv_gamma = atof(argv[++i])) == 0.0f) {
+						fprintf(stderr, "-g must be followed by a non-zero gamma value\n");
+						return -1;
+					}
+					inv_gamma = 1.0f / inv_gamma;
 					break;
 
 				case 'o':

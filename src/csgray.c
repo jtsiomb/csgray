@@ -23,7 +23,7 @@ int csg_init(void)
 	oblist = 0;
 	plights = 0;
 
-	csg_ambient(0.05, 0.05, 0.05);
+	csg_ambient(0, 0, 0);
 	csg_view(0, 0, 5, 0, 0, 0);
 	csg_fov(50);
 
@@ -198,7 +198,7 @@ csg_object *csg_plane(float x, float y, float z, float nx, float ny, float nz)
 	o->plane.ny = ny;
 	o->plane.nz = nz;
 	o->plane.d = x * nx + y * ny + z * nz;
-	return 0;
+	return o;
 }
 
 csg_object *csg_box(float x, float y, float z, float xsz, float ysz, float zsz)
@@ -326,7 +326,7 @@ static int ray_trace(struct ray *ray, float *col)
 
 static void shade(float *col, struct ray *ray, struct hit *hit)
 {
-	float ndotl, len;
+	float ndotl, len, falloff;
 	csg_object *o, *lt = plights;
 	float dcol[3], scol[3] = {0};
 	float ldir[3];
@@ -350,24 +350,25 @@ static void shade(float *col, struct ray *ray, struct hit *hit)
 		sray.dy = ldir[1];
 		sray.dz = ldir[2];
 
-		if(!find_intersection(&sray, &tmphit) || tmphit.t < 1.0f) {
+		if(1) {//!find_intersection(&sray, &tmphit) || tmphit.t > 1.0f) {
 			if((len = sqrt(ldir[0] * ldir[0] + ldir[1] * ldir[1] + ldir[2] * ldir[2])) != 0.0f) {
 				float s = 1.0f / len;
 				ldir[0] *= s;
 				ldir[1] *= s;
 				ldir[2] *= s;
 			}
+			falloff = 1.0f / (len * len);
 
 			if((ndotl = hit->nx * ldir[0] + hit->ny * ldir[1] + hit->nz * ldir[2]) < 0.0f) {
 				ndotl = 0.0f;
 			}
 
-			dcol[0] += o->ob.r * lt->ob.emr * ndotl;
-			dcol[1] += o->ob.g * lt->ob.emg * ndotl;
-			dcol[2] += o->ob.b * lt->ob.emb * ndotl;
+			dcol[0] += o->ob.r * lt->ob.emr * ndotl * falloff;
+			dcol[1] += o->ob.g * lt->ob.emg * ndotl * falloff;
+			dcol[2] += o->ob.b * lt->ob.emb * ndotl * falloff;
 		}
 
-		lt = lt->ob.next;
+		lt = lt->ob.plt_next;
 	}
 
 	col[0] = dcol[0] + scol[0];

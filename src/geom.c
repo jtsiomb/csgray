@@ -101,9 +101,6 @@ struct hit *ray_sphere(struct ray *ray, csg_object *o)
 		t[1] = tmp;
 	}
 
-	if(t[0] < EPSILON) t[0] = EPSILON;
-	if(t[1] < EPSILON) t[1] = EPSILON;
-
 	hitlist = hit = alloc_hits(2);
 	for(i=0; i<2; i++) {
 		float c[3] = {0, 0, 0};
@@ -139,15 +136,16 @@ struct hit *ray_plane(struct ray *ray, csg_object *o)
 
 	xform_ray(&locray, o->ob.inv_xform);
 
+	ndotr = o->plane.nx * locray.dx + o->plane.ny * locray.dy + o->plane.nz * locray.dz;
+	if(fabs(ndotr) < EPSILON) return 0;
+
 	vx = o->plane.nx * o->plane.d - locray.x;
 	vy = o->plane.ny * o->plane.d - locray.y;
 	vz = o->plane.nz * o->plane.d - locray.z;
 
 	ndotv = o->plane.nx * vx + o->plane.ny * vy + o->plane.nz * vz;
-	if(fabs(ndotv) < EPSILON) return 0;
 
-	ndotr = o->plane.nx * locray.dx + o->plane.ny * locray.dy + o->plane.nz * locray.dz;
-	t = ndotr / ndotv;
+	t = ndotv / ndotr;
 
 	if(t > EPSILON) {
 		hit = alloc_hits(1);
@@ -186,9 +184,50 @@ struct hit *ray_csg_isect(struct ray *ray, csg_object *o)
 	return 0;
 }
 
+static struct hit *first(struct hit *hlist)
+{
+	return hlist;
+}
+
+static struct hit *last(struct hit *hlist)
+{
+	while(hlist->next) {
+		hlist = hlist->next;
+	}
+	return hlist;
+}
+
 struct hit *ray_csg_sub(struct ray *ray, csg_object *o)
 {
-	return 0;
+	struct hit *hita, *hitb, *lasthit, tmp;
+
+	hita = ray_intersect(ray, o->sub.a);
+	hitb = ray_intersect(ray, o->sub.b);
+
+	if(!hita) return 0;
+	if(!hitb) return hita;
+
+	if(first(hita)->t < first(hitb)->t) {
+		free_hit_list(hitb);
+		return hita;
+	}
+	if(first(hita)->t < (lasthit = last(hitb))->t) {
+		/* overlapping */
+		tmp = *hitb;
+		*hitb = *lasthit;
+
+		free_hit_list(tmp.next);
+
+		hitb->nx = -hitb->nx;
+		hitb->ny = -hitb->ny;
+		hitb->nz = -hitb->nz;
+
+		free_hit_list(hita);
+		return hitb;
+	}
+
+	free_hit_list(hitb);
+	return hita;
 }
 
 
