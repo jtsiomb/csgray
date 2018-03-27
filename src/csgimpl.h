@@ -21,6 +21,7 @@ struct object {
 	float emr, emg, emb;
 	float roughness;
 	float opacity;
+	int metallic;
 
 	float xform[16], inv_xform[16];
 

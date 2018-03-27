@@ -39,9 +39,20 @@ int main(int argc, char **argv)
 
 	oa = csg_sphere(0, 0, 0, 1);
 	csg_color(oa, 1, 0.1, 0.05);
+	csg_roughness(oa, 0.3);
 	ob = csg_sphere(0.3, 0.7, 0.7, 0.7);
 	csg_color(ob, 0.2, 0.3, 1);
+	csg_roughness(ob, 0.3);
 	oc = csg_subtraction(oa, ob);
+
+	oa = oc;
+
+	ob = csg_sphere(-0.9, -0.1, 0.7, 0.5);
+	csg_color(ob, 1, 0.9, 0.2);
+	csg_roughness(ob, 0.3);
+
+	oc = csg_subtraction(oa, ob);
+
 	csg_add_object(oc);
 
 	obj = csg_plane(0, -1, 0, 0, 1, 0);

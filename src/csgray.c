@@ -273,6 +273,11 @@ void csg_opacity(csg_object *o, float p)
 	o->ob.opacity = p;
 }
 
+void csg_metallic(csg_object *o, int m)
+{
+	o->ob.metallic = m;
+}
+
 
 void csg_render_pixel(int x, int y, int width, int height, float aspect, float *color)
 {
@@ -326,10 +331,10 @@ static int ray_trace(struct ray *ray, float *col)
 
 static void shade(float *col, struct ray *ray, struct hit *hit)
 {
-	float ndotl, len, falloff;
+	float ndotl, ndoth, len, falloff, spec;
 	csg_object *o, *lt = plights;
 	float dcol[3], scol[3] = {0};
-	float ldir[3];
+	float ldir[3], lcol[3], hdir[3];
 	struct ray sray;
 	struct hit tmphit;
 
@@ -359,13 +364,45 @@ static void shade(float *col, struct ray *ray, struct hit *hit)
 			}
 			falloff = 1.0f / (len * len);
 
+			lcol[0] = lt->ob.emr * falloff;
+			lcol[1] = lt->ob.emg * falloff;
+			lcol[2] = lt->ob.emb * falloff;
+
 			if((ndotl = hit->nx * ldir[0] + hit->ny * ldir[1] + hit->nz * ldir[2]) < 0.0f) {
 				ndotl = 0.0f;
 			}
 
-			dcol[0] += o->ob.r * lt->ob.emr * ndotl * falloff;
-			dcol[1] += o->ob.g * lt->ob.emg * ndotl * falloff;
-			dcol[2] += o->ob.b * lt->ob.emb * ndotl * falloff;
+			dcol[0] += o->ob.r * lcol[0] * ndotl;
+			dcol[1] += o->ob.g * lcol[1] * ndotl;
+			dcol[2] += o->ob.b * lcol[2] * ndotl;
+
+			if(o->ob.roughness < 1.0f) {
+				float gloss = 1.0f - o->ob.roughness;
+
+				hdir[0] = ldir[0] - ray->dx;
+				hdir[1] = ldir[1] - ray->dy;
+				hdir[2] = ldir[2] - ray->dz;
+				if((len = sqrt(hdir[0] * hdir[0] + hdir[1] * hdir[1] + hdir[2] * hdir[2])) != 0.0f) {
+					float s = 1.0f / len;
+					hdir[0] *= s;
+					hdir[1] *= s;
+					hdir[2] *= s;
+				}
+
+				if((ndoth = hit->nx * hdir[0] + hit->ny * hdir[1] + hit->nz * hdir[2]) < 0.0f) {
+					ndoth = 0.0f;
+				}
+				spec = gloss * pow(ndoth, 100.0f * gloss);
+
+				if(o->ob.metallic) {
+					lcol[0] *= o->ob.r;
+					lcol[1] *= o->ob.g;
+					lcol[2] *= o->ob.b;
+				}
+				scol[0] += lcol[0] * spec;
+				scol[1] += lcol[1] * spec;
+				scol[2] += lcol[2] * spec;
+			}
 		}
 
 		lt = lt->ob.plt_next;

@@ -300,12 +300,12 @@ static struct hinterv *interval_isect(struct hinterv *a, struct hinterv *b)
 	}
 
 	/* partial overlap */
-	if(a->end[0].t < b->end[1].t) {
-		res->end[0] = b->end[1];
-		res->end[1] = a->end[0];
+	if(a->end[0].t < b->end[0].t) {
+		res->end[0] = b->end[0];
+		res->end[1] = a->end[1];
 	} else {
-		res->end[0] = a->end[1];
-		res->end[1] = a->end[0];
+		res->end[0] = a->end[0];
+		res->end[1] = b->end[1];
 	}
 	return res;
 }

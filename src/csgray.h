@@ -32,6 +32,7 @@ void csg_emission(csg_object *o, float r, float g, float b);
 void csg_color(csg_object *o, float r, float g, float b);
 void csg_roughness(csg_object *o, float r);
 void csg_opacity(csg_object *o, float p);
+void csg_metallic(csg_object *o, int m);
 
 void csg_render_pixel(int x, int y, int width, int height, float aspect, float *color);
 void csg_render_image(float *pixels, int width, int height);
