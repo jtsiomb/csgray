@@ -14,4 +14,4 @@ version published by the Free Software Foundation. See COPYING for details.
 Build
 -----
 Just type make to build. You'll need `libtreestore` from
-http://github.com:jtsiomb/libtreestore
+http://github.com/jtsiomb/libtreestore
