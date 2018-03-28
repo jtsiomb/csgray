@@ -1,3 +1,20 @@
+/*
+csgray - simple CSG raytracer
+Copyright (C) 2018  John Tsiombikas <nuclear@member.fsf.org>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,36 +56,6 @@ int main(int argc, char **argv)
 		perror("failed to allocate framebuffer");
 		return 1;
 	}
-
-	/*
-	csg_view(0, 0, 5, 0, 0, 0);
-
-	oa = csg_sphere(0, 0, 0, 1);
-	csg_color(oa, 1, 0.1, 0.05);
-	csg_roughness(oa, 0.3);
-	ob = csg_sphere(0.3, 0.7, 0.7, 0.7);
-	csg_color(ob, 0.2, 0.3, 1);
-	csg_roughness(ob, 0.3);
-	oc = csg_subtraction(oa, ob);
-
-	oa = oc;
-
-	ob = csg_sphere(-0.9, -0.1, 0.7, 0.5);
-	csg_color(ob, 1, 0.9, 0.2);
-	csg_roughness(ob, 0.3);
-
-	oc = csg_subtraction(oa, ob);
-
-	csg_add_object(oc);
-
-	obj = csg_plane(0, -1, 0, 0, 1, 0);
-	csg_color(obj, 0.4, 0.7, 0.4);
-	csg_add_object(obj);
-
-	obj = csg_null(-4, 10, 10);
-	csg_emission(obj, 80, 80, 80);
-	csg_add_object(obj);
-	*/
 
 	csg_render_image(pixels, width, height);
 	save_image(out_fname, pixels, width, height);
