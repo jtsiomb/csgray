@@ -420,10 +420,12 @@ void csg_render_image(float *pixels, int width, int height)
 	int i, j;
 	float aspect = (float)width / (float)height;
 
+#pragma omp parallel for private(j) schedule(dynamic, 32)
 	for(i=0; i<height; i++) {
+		float *pptr = pixels + i * width * 3;
 		for(j=0; j<width; j++) {
-			csg_render_pixel(j, i, width, height, aspect, pixels);
-			pixels += 3;
+			csg_render_pixel(j, i, width, height, aspect, pptr);
+			pptr += 3;
 		}
 	}
 }

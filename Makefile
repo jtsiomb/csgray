@@ -3,8 +3,8 @@ obj = $(src:.c=.o)
 dep = $(obj:.o=.d)
 bin = csgray
 
-CFLAGS = -pedantic -Wall -g
-LDFLAGS = -lm -ltreestore
+CFLAGS = -pedantic -Wall -g -fopenmp
+LDFLAGS = -lm -ltreestore -lgomp
 
 $(bin): $(obj)
 	$(CC) -o $@ $(obj) $(LDFLAGS)

@@ -37,7 +37,6 @@ static const char *in_fname;
 
 int main(int argc, char **argv)
 {
-	csg_object *oa, *ob, *oc, *obj;
 	float *pixels;
 
 	if(parse_opt(argc, argv) == -1) {
