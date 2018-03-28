@@ -34,6 +34,12 @@ void csg_roughness(csg_object *o, float r);
 void csg_opacity(csg_object *o, float p);
 void csg_metallic(csg_object *o, int m);
 
+void csg_reset_xform(csg_object *o);
+void csg_translate(csg_object *o, float x, float y, float z);
+void csg_rotate(csg_object *o, float angle, float x, float y, float z);
+void csg_scale(csg_object *o, float x, float y, float z);
+void csg_lookat(csg_object *o, float x, float y, float z, float tx, float ty, float tz, float ux, float uy, float uz);
+
 void csg_render_pixel(int x, int y, int width, int height, float aspect, float *color);
 void csg_render_image(float *pixels, int width, int height);
 

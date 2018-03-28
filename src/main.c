@@ -16,6 +16,7 @@ static int parse_opt(int argc, char **argv);
 static int width = DFL_WIDTH, height = DFL_HEIGHT;
 static float inv_gamma = 1.0f / DFL_GAMMA;
 static const char *out_fname = DFL_OUTFILE;
+static const char *in_fname;
 
 int main(int argc, char **argv)
 {
@@ -30,11 +31,16 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	if(csg_load(in_fname) == -1) {
+		return 1;
+	}
+
 	if(!(pixels = malloc(width * height * 3 * sizeof *pixels))) {
 		perror("failed to allocate framebuffer");
 		return 1;
 	}
 
+	/*
 	csg_view(0, 0, 5, 0, 0, 0);
 
 	oa = csg_sphere(0, 0, 0, 1);
@@ -62,6 +68,7 @@ int main(int argc, char **argv)
 	obj = csg_null(-4, 10, 10);
 	csg_emission(obj, 80, 80, 80);
 	csg_add_object(obj);
+	*/
 
 	csg_render_image(pixels, width, height);
 	save_image(out_fname, pixels, width, height);
@@ -149,9 +156,18 @@ static int parse_opt(int argc, char **argv)
 				return -1;
 			}
 		} else {
-			fprintf(stderr, "unexpected argument: %s\n", argv[i]);
-			return -1;
+			if(in_fname) {
+				fprintf(stderr, "unexpected argument: %s\n", argv[i]);
+				return -1;
+			}
+			in_fname = argv[i];
 		}
 	}
+
+	if(!in_fname) {
+		fprintf(stderr, "you need to pass a scene file to read\n");
+		return -1;
+	}
+
 	return 0;
 }

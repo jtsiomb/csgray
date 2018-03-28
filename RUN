@@ -1,4 +1,4 @@
 #!/bin/sh
 
 rm -f output.ppm
-./csgray $* && display output.ppm
+./csgray scene $* && display output.ppm

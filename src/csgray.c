@@ -61,21 +61,32 @@ void csg_fov(float fov)
 int csg_load(const char *fname)
 {
 	struct ts_node *root = 0, *c;
+	csg_object *o;
 
 	if(!(root = ts_load(fname))) {
 		fprintf(stderr, "failed to open %s\n", fname);
 		return -1;
 	}
-	if(strcmp(root->name, "scene") != 0) {
+	if(strcmp(root->name, "csgray_scene") != 0) {
 		fprintf(stderr, "invalid scene file: %s\n", fname);
 		goto err;
 	}
 
 	c = root->child_list;
 	while(c) {
-		csg_object *o = load_object(c);
-		if(!o) goto err;
-		csg_add_object(o);
+		if(strcmp(c->name, "viewer") == 0) {
+			static float def_pos[] = {0, 0, 5};
+			static float def_targ[] = {0, 0, 0};
+
+			float *p = ts_get_attr_vec(c, "position", def_pos);
+			float *t = ts_get_attr_vec(c, "target", def_targ);
+
+			csg_view(p[0], p[1], p[2], t[0], t[1], t[2]);
+			csg_fov(ts_get_attr_num(c, "fov", 50.0f));
+
+		} else if((o = load_object(c))) {
+			csg_add_object(o);
+		}
 		c = c->next;
 	}
 
@@ -306,6 +317,35 @@ void csg_metallic(csg_object *o, int m)
 	o->ob.metallic = m;
 }
 
+void csg_reset_xform(csg_object *o)
+{
+	mat4_identity(o->ob.xform);
+	mat4_identity(o->ob.inv_xform);
+}
+
+void csg_translate(csg_object *o, float x, float y, float z)
+{
+	mat4_translate(o->ob.xform, x, y, z);
+	mat4_pre_translate(o->ob.inv_xform, -x, -y, -z);
+}
+
+void csg_rotate(csg_object *o, float angle, float x, float y, float z)
+{
+	mat4_rotate(o->ob.xform, angle, x, y, z);
+	mat4_pre_rotate(o->ob.inv_xform, -angle, x, y, z);
+}
+
+void csg_scale(csg_object *o, float x, float y, float z)
+{
+	mat4_scale(o->ob.xform, x, y, z);
+	mat4_pre_scale(o->ob.inv_xform, 1.0f / x, 1.0f / y, 1.0f / z);
+}
+
+void csg_lookat(csg_object *o, float x, float y, float z, float tx, float ty, float tz, float ux, float uy, float uz)
+{
+	mat4_lookat(o->ob.xform, x, y, z, tx, ty, tz, ux, uy, uz);
+	mat4_inv_lookat(o->ob.inv_xform, x, y, z, tx, ty, tz, ux, uy, uz);
+}
 
 void csg_render_pixel(int x, int y, int width, int height, float aspect, float *color)
 {
@@ -484,53 +524,115 @@ static int find_intersection(struct ray *ray, struct hit *best)
 
 static csg_object *load_object(struct ts_node *node)
 {
-	float *apos, *arot, *ascale, *acolor;
-	float aroughness;
+	float *avec;
 	struct ts_node *c;
-	csg_object *o, *olist = 0, *otail = 0;
-	int num_subobj = 0;
-
-	c = node->child_list;
-	while(c) {
-		if((o = load_object(c))) {
-			if(olist) {
-				otail->ob.next = o;
-				otail = o;
-			} else {
-				olist = otail = o;
-			}
-			++num_subobj;
-		}
-		c = c->next;
-	}
-
-	apos = ts_get_attr_vec(node, "position", 0);
-	arot = ts_get_attr_vec(node, "rotation", 0);
-	ascale = ts_get_attr_vec(node, "scaling", 0);
-	acolor = ts_get_attr_vec(node, "color", 0);
-	aroughness = ts_get_attr_num(node, "roughness", 0);
+	csg_object *sub, *o = 0, *olist = 0, *otail = 0;
+	int num_subobj = 0, is_csgop = 0;
 
 	if(strcmp(node->name, "null") == 0) {
-		if(num_subobj) {
-			fprintf(stderr, "null can't have sub-objects\n");
+		if(!(o = csg_null(0, 0, 0))) {
 			goto err;
 		}
-		if(!(o = alloc_object(OB_NULL))) {
-			goto err;
-		}
-		return o;
 
 	} else if(strcmp(node->name, "sphere") == 0) {
-		if(num_subobj) {
-			fprintf(stderr, "sphere can't have sub-objects\n");
+		float rad = ts_get_attr_num(node, "radius", 1.0f);
+		if(!(o = csg_sphere(0, 0, 0, rad))) {
 			goto err;
 		}
-		if(!(o = alloc_object(OB_SPHERE))) {
+
+	} else if(strcmp(node->name, "plane") == 0) {
+		static float def_norm[] = {0, 1, 0};
+		float *norm = ts_get_attr_vec(node, "normal", def_norm);
+		if(!(o = csg_plane(0, 0, 0, norm[0], norm[1], norm[2]))) {
 			goto err;
 		}
+
+	} else if(strcmp(node->name, "box") == 0) {
+		static float def_sz[] = {1, 1, 1};
+		float *sz = ts_get_attr_vec(node, "size", def_sz);
+		if(!(o = csg_box(0, 0, 0, sz[0], sz[1], sz[2]))) {
+			goto err;
+		}
+
+	} else if(strcmp(node->name, "union") == 0) {
+		if(!(o = csg_union(0, 0))) {
+			goto err;
+		}
+		is_csgop = 1;
+
+	} else if(strcmp(node->name, "intersect") == 0) {
+		if(!(o = csg_intersection(0, 0))) {
+			goto err;
+		}
+		is_csgop = 1;
+
+	} else if(strcmp(node->name, "subtract") == 0) {
+		if(!(o = csg_subtraction(0, 0))) {
+			goto err;
+		}
+		is_csgop = 1;
+
+	} else {
+		goto err;
 	}
 
+	if(is_csgop) {
+		c = node->child_list;
+		while(c) {
+			if((sub = load_object(c))) {
+				if(olist) {
+					otail->ob.next = sub;
+					otail = sub;
+				} else {
+					olist = otail = sub;
+				}
+				++num_subobj;
+			}
+			c = c->next;
+		}
+
+		if(num_subobj != 2) {
+			goto err;
+		}
+		o->un.a = olist;
+		o->un.b = olist->ob.next;
+		olist->ob.next = 0;
+	}
+
+	if((avec = ts_get_attr_vec(node, "position", 0))) {
+		csg_translate(o, avec[0], avec[1], avec[2]);
+	}
+	if((avec = ts_get_attr_vec(node, "rotaxis", 0))) {
+		csg_rotate(o, ts_get_attr_num(node, "rotangle", 0.0f), avec[0], avec[1], avec[2]);
+	}
+	if((avec = ts_get_attr_vec(node, "scaling", 0))) {
+		csg_scale(o, avec[0], avec[1], avec[2]);
+	}
+	if((avec = ts_get_attr_vec(node, "target", 0))) {
+		/* don't move this before position */
+		float def_up[] = {0, 1, 0};
+		float *up = ts_get_attr_vec(node, "up", def_up);
+		float x = o->ob.xform[12];
+		float y = o->ob.xform[13];
+		float z = o->ob.xform[14];
+		csg_lookat(o, x, y, z, avec[0], avec[1], avec[2], up[0], up[1], up[2]);
+	}
+
+	if((avec = ts_get_attr_vec(node, "color", 0))) {
+		csg_color(o, avec[0], avec[1], avec[2]);
+	}
+	if((avec = ts_get_attr_vec(node, "emission", 0))) {
+		csg_emission(o, avec[0], avec[1], avec[2]);
+	}
+
+	csg_roughness(o, ts_get_attr_num(node, "roughness", o->ob.roughness));
+	csg_opacity(o, ts_get_attr_num(node, "opacity", o->ob.opacity));
+	csg_metallic(o, ts_get_attr_int(node, "metallic", o->ob.metallic));
+
+	return o;
+
 err:
+	csg_free_object(o);
 	while(olist) {
 		o = olist;
 		olist = olist->ob.next;
