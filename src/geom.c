@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <float.h>
+#include <assert.h>
 #include "geom.h"
 #include "matrix.h"
 
@@ -59,6 +60,8 @@ struct hinterv *ray_intersect(struct ray *ray, csg_object *o)
 		return ray_cylinder(ray, o);
 	case OB_PLANE:
 		return ray_plane(ray, o);
+	case OB_BOX:
+		return ray_box(ray, o);
 	case OB_UNION:
 		return ray_csg_un(ray, o);
 	case OB_INTERSECTION:
@@ -130,12 +133,142 @@ struct hinterv *ray_sphere(struct ray *ray, csg_object *o)
 	return hit;
 }
 
+static int ray_cylcap(struct ray *ray, float y, float rad, float *tres)
+{
+	float ndotr, ndotv, vy, t;
+	float ny = y > 0.0f ? 1.0f : -1.0f;
+	float x, z, lensq;
+
+	ndotr = ny * ray->dy;
+	if(fabs(ndotr) < EPSILON) return 0;
+
+	vy = y - ray->y;
+
+	ndotv = ny * vy;
+
+	t = ndotv / ndotr;
+
+	x = ray->x + ray->dx * t;
+	z = ray->z + ray->dz * t;
+	lensq = x * x + z * z;
+
+	if(lensq <= rad * rad) {
+		*tres = t;
+		return 1;
+	}
+	return 0;
+}
+
 struct hinterv *ray_cylinder(struct ray *ray, csg_object *o)
 {
+	int i, out[2] = {0}, t_is_cap[2] = {0};
+	float a, b, c, d, sqrt_d, t[2], sq_rad, tmp, y[2], hh, cap_t;
+	struct hinterv *hit;
 	struct ray locray = *ray;
 
+	if(o->cyl.rad == 0.0f || o->cyl.height == 0.0f) {
+		return 0;
+	}
+	sq_rad = o->cyl.rad * o->cyl.rad;
+	hh = o->cyl.height / 2.0f;
+
 	xform_ray(&locray, o->ob.inv_xform);
-	return 0;	/* TODO */
+
+	a = locray.dx * locray.dx + locray.dz * locray.dz;
+	b = 2.0f * (locray.dx * locray.x + locray.dz * locray.z);
+	c = locray.x * locray.x + locray.z * locray.z - sq_rad;
+
+	d = b * b - 4.0f * a * c;
+	if(d < EPSILON) return 0;
+
+	sqrt_d = sqrt(d);
+	t[0] = (-b + sqrt_d) / (2.0f * a);
+	t[1] = (-b - sqrt_d) / (2.0f * a);
+
+	if(t[0] < EPSILON && t[1] < EPSILON) {
+		return 0;
+	}
+	if(t[1] < t[0]) {
+		tmp = t[0];
+		t[0] = t[1];
+		t[1] = tmp;
+	}
+
+	y[0] = locray.y + locray.dy * t[0];
+	y[1] = locray.y + locray.dy * t[1];
+
+	if(y[0] < -hh || y[0] > hh) {
+		out[0] = 1;
+	}
+	if(y[1] < -hh || y[1] > hh) {
+		out[1] = 1;
+	}
+
+	if(out[0]) {
+		t[0] = t[1];
+	}
+	if(out[1]) {
+		t[1] = t[0];
+	}
+
+	if(ray_cylcap(ray, hh, o->cyl.rad, &cap_t)) {
+		if(cap_t < t[0]) {
+			t[0] = cap_t;
+			t_is_cap[0] = 1;
+			out[0] = 0;
+		}
+		if(cap_t > t[1]) {
+			t[1] = cap_t;
+			t_is_cap[1] = 1;
+			out[1] = 0;
+		}
+	}
+	if(ray_cylcap(ray, -hh, o->cyl.rad, &cap_t)) {
+		if(cap_t < t[0]) {
+			t[0] = cap_t;
+			t_is_cap[0] = -1;
+			out[0] = 0;
+		}
+		if(cap_t > t[1]) {
+			t[1] = cap_t;
+			t_is_cap[1] = -1;
+			out[1] = 0;
+		}
+	}
+
+	if(out[0] && out[1]) {
+		return 0;
+	}
+
+	hit = alloc_hits(1);
+	hit->o = o;
+	for(i=0; i<2; i++) {
+		float c[3] = {0, 0, 0};
+		float x, y, z;
+
+		x = ray->x + ray->dx * t[i];
+		y = ray->y + ray->dy * t[i];
+		z = ray->z + ray->dz * t[i];
+
+		if(t_is_cap[i]) {
+			hit->end[i].nx = hit->end[i].nz = 0.0f;
+			hit->end[i].ny = t_is_cap[i] > 0 ? 1.0f : -1.0f;
+		} else {
+			c[1] = locray.y + locray.dy * t[i];
+			mat4_xform3(c, o->ob.xform, c);
+
+			hit->end[i].nx = (x - c[0]) / o->cyl.rad;
+			hit->end[i].ny = (y - c[1]) / o->cyl.rad;
+			hit->end[i].nz = (z - c[2]) / o->cyl.rad;
+		}
+
+		hit->end[i].t = t[i];
+		hit->end[i].x = x;
+		hit->end[i].y = y;
+		hit->end[i].z = z;
+		hit->end[i].o = o;
+	}
+	return hit;
 }
 
 struct hinterv *ray_plane(struct ray *ray, csg_object *o)
@@ -175,6 +308,88 @@ struct hinterv *ray_plane(struct ray *ray, csg_object *o)
 	hit->end[1].x = ray->x + ray->dx * 10000.0f;
 	hit->end[1].y = ray->y + ray->dy * 10000.0f;
 	hit->end[1].z = ray->z + ray->dz * 10000.0f;
+	return hit;
+}
+
+#define BEXT(x)	((x) * 0.49999)
+
+struct hinterv *ray_box(struct ray *ray, csg_object *o)
+{
+	int i, sign[3];
+	float param[2][3];
+	float inv_dir[3];
+	float tmin, tmax, tymin, tymax, tzmin, tzmax;
+	struct hinterv *hit;
+	struct ray locray = *ray;
+	float dirmat[16];
+
+	xform_ray(&locray, o->ob.inv_xform);
+
+	for(i=0; i<3; i++) {
+		float sz = *(&o->box.xsz + i);
+		param[0][i] = -0.5 * sz;
+		param[1][i] = 0.5 * sz;
+
+		inv_dir[i] = 1.0f / *(&locray.dx + i);
+		sign[i] = inv_dir[i] < 0;
+	}
+
+	tmin = (param[sign[0]][0] - locray.x) * inv_dir[0];
+	tmax = (param[1 - sign[0]][0] - locray.x) * inv_dir[0];
+	tymin = (param[sign[1]][1] - locray.y) * inv_dir[1];
+	tymax = (param[1 - sign[1]][1] - locray.y) * inv_dir[1];
+
+	if(tmin > tymax || tymin > tmax) {
+		return 0;
+	}
+	if(tymin > tmin) {
+		tmin = tymin;
+	}
+	if(tymax < tmax) {
+		tmax = tymax;
+	}
+
+	tzmin = (param[sign[2]][2] - locray.z) * inv_dir[2];
+	tzmax = (param[1 - sign[2]][2] - locray.z) * inv_dir[2];
+
+	if(tmin > tzmax || tzmin > tmax) {
+		return 0;
+	}
+	if(tzmin > tmin) {
+		tmin = tzmin;
+	}
+	if(tzmax < tmax) {
+		tmax = tzmax;
+	}
+
+	mat4_copy(dirmat, o->ob.xform);
+	mat4_upper3x3(dirmat);
+
+	hit = alloc_hits(1);
+	hit->o = o;
+	for(i=0; i<2; i++) {
+		float n[3] = {0};
+		float t = i == 0 ? tmin : tmax;
+
+		float x = (locray.x + locray.dx * t) / o->box.xsz;
+		float y = (locray.y + locray.dy * t) / o->box.ysz;
+		float z = (locray.z + locray.dz * t) / o->box.zsz;
+
+		if(fabs(x) > fabs(y) && fabs(x) > fabs(z)) {
+			n[0] = x > 0.0f ? 1.0f : -1.0f;
+		} else if(fabs(y) > fabs(z)) {
+			n[1] = y > 0.0f ? 1.0f : -1.0f;
+		} else {
+			n[2] = z > 0.0f ? 1.0f : -1.0f;
+		}
+
+		hit->end[i].o = o;
+		hit->end[i].t = t;
+		hit->end[i].x = ray->x + ray->dx * t;
+		hit->end[i].y = ray->y + ray->dy * t;
+		hit->end[i].z = ray->z + ray->dz * t;
+		mat4_xform3(&hit->end[i].nx, dirmat, n);
+	}
 	return hit;
 }
 

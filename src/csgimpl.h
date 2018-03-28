@@ -38,13 +38,18 @@ struct sphere {
 
 struct cylinder {
 	struct object ob;
-	float rad;
+	float rad, height;
 };
 
 struct plane {
 	struct object ob;
 	float nx, ny, nz;
 	float d;
+};
+
+struct box {
+	struct object ob;
+	float xsz, ysz, zsz;
 };
 
 struct csgop {
@@ -57,6 +62,7 @@ union csg_object {
 	struct sphere sph;
 	struct cylinder cyl;
 	struct plane plane;
+	struct box box;
 	struct csgop un, isect, sub;
 };
 
@@ -68,5 +74,7 @@ struct camera {
 
 	float xform[16];
 };
+
+int csg_dbg_pixel;
 
 #endif	/* CSGIMPL_H_ */

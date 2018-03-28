@@ -153,10 +153,12 @@ int csg_remove_object(csg_object *o)
 
 void csg_free_object(csg_object *o)
 {
-	if(o->ob.destroy) {
-		o->ob.destroy(o);
+	if(o) {
+		if(o->ob.destroy) {
+			o->ob.destroy(o);
+		}
+		free(o);
 	}
-	free(o);
 }
 
 static union csg_object *alloc_object(int type)
@@ -187,6 +189,7 @@ csg_object *csg_null(float x, float y, float z)
 	}
 
 	mat4_translation(o->ob.xform, x, y, z);
+	mat4_translation(o->ob.inv_xform, -x, -y, -z);
 	return o;
 }
 
@@ -200,24 +203,26 @@ csg_object *csg_sphere(float x, float y, float z, float r)
 
 	o->sph.rad = r;
 	mat4_translation(o->ob.xform, x, y, z);
-	mat4_copy(o->ob.inv_xform, o->ob.xform);
-	mat4_inverse(o->ob.inv_xform);
+	mat4_translation(o->ob.inv_xform, -x, -y, -z);
 	return o;
 }
 
 csg_object *csg_cylinder(float x0, float y0, float z0, float x1, float y1, float z1, float r)
 {
 	csg_object *o;
-	float dx, dy, dz;
+	float x, y, z, dx, dy, dz;
 	int major;
 
 	if(!(o = alloc_object(OB_CYLINDER))) {
 		return 0;
 	}
+	o->cyl.rad = r;
 
 	dx = x1 - x0;
 	dy = y1 - y0;
 	dz = z1 - z0;
+
+	o->cyl.height = sqrt(dx * dx + dy * dy + dz * dz);
 
 	if(fabs(dx) > fabs(dy) && fabs(dx) > fabs(dz)) {
 		major = 0;
@@ -227,8 +232,11 @@ csg_object *csg_cylinder(float x0, float y0, float z0, float x1, float y1, float
 		major = 2;
 	}
 
-	o->cyl.rad = r;
-	mat4_lookat(o->ob.xform, x0, y0, z0, x1, y1, z1, 0, major == 2 ? 1 : 0, major == 2 ? 0 : 1);
+	x = (x0 + x1) / 2.0f;
+	y = (y0 + y1) / 2.0f;
+	z = (z0 + z1) / 2.0f;
+
+	mat4_lookat(o->ob.xform, x, y, z, dx, dz, -dy, 0, major == 2 ? 0 : 1, major == 2 ? 1 : 0);
 	mat4_copy(o->ob.inv_xform, o->ob.xform);
 	mat4_inverse(o->ob.inv_xform);
 	return o;
@@ -254,13 +262,28 @@ csg_object *csg_plane(float x, float y, float z, float nx, float ny, float nz)
 	o->plane.nx = nx;
 	o->plane.ny = ny;
 	o->plane.nz = nz;
-	o->plane.d = x * nx + y * ny + z * nz;
+	o->plane.d = 0.0f;
+
+	mat4_translation(o->ob.xform, x, y, z);
+	mat4_translation(o->ob.inv_xform, -x, -y, -z);
 	return o;
 }
 
 csg_object *csg_box(float x, float y, float z, float xsz, float ysz, float zsz)
 {
-	return 0;
+	csg_object *o;
+
+	if(!(o = alloc_object(OB_BOX))) {
+		return 0;
+	}
+
+	o->box.xsz = xsz;
+	o->box.ysz = ysz;
+	o->box.zsz = zsz;
+
+	mat4_translation(o->ob.xform, x, y, z);
+	mat4_translation(o->ob.inv_xform, -x, -y, -z);
+	return o;
 }
 
 csg_object *csg_union(csg_object *a, csg_object *b)
@@ -368,6 +391,8 @@ void csg_lookat(csg_object *o, float x, float y, float z, float tx, float ty, fl
 void csg_render_pixel(int x, int y, int width, int height, float aspect, float *color)
 {
 	struct ray ray;
+
+	csg_dbg_pixel = (x == 400 && y == 186);
 
 	calc_primary_ray(&ray, x, y, width, height, aspect);
 	ray_trace(&ray, color);
@@ -556,6 +581,13 @@ static csg_object *load_object(struct ts_node *node)
 	} else if(strcmp(node->name, "sphere") == 0) {
 		float rad = ts_get_attr_num(node, "radius", 1.0f);
 		if(!(o = csg_sphere(0, 0, 0, rad))) {
+			goto err;
+		}
+
+	} else if(strcmp(node->name, "cylinder") == 0) {
+		float rad = ts_get_attr_num(node, "radius", 1.0f);
+		float height = ts_get_attr_num(node, "height", 1.0f);
+		if(!(o = csg_cylinder(0, -height/2.0f, 0, 0, height/2.0f, 0, rad))) {
 			goto err;
 		}
 

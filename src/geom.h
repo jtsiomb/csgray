@@ -33,6 +33,7 @@ struct hinterv *ray_intersect(struct ray *ray, csg_object *o);
 struct hinterv *ray_sphere(struct ray *ray, csg_object *o);
 struct hinterv *ray_cylinder(struct ray *ray, csg_object *o);
 struct hinterv *ray_plane(struct ray *ray, csg_object *o);
+struct hinterv *ray_box(struct ray *ray, csg_object *o);
 struct hinterv *ray_csg_un(struct ray *ray, csg_object *o);
 struct hinterv *ray_csg_isect(struct ray *ray, csg_object *o);
 struct hinterv *ray_csg_sub(struct ray *ray, csg_object *o);
