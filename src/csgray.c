@@ -44,12 +44,30 @@ void csg_destroy(void)
 
 void csg_view(float x, float y, float z, float tx, float ty, float tz)
 {
+	float dir[3];
+	float len;
+
 	cam.x = x;
 	cam.y = y;
 	cam.z = z;
 	cam.tx = tx;
 	cam.ty = ty;
 	cam.tz = tz;
+
+	dir[0] = tx - x;
+	dir[1] = ty - y;
+	dir[2] = tz - z;
+	len = sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]);
+
+	if(1.0f - fabs(ty - y) / len < 1e-6f) {
+		cam.ux = cam.uy = 0.0f;
+		cam.uz = -1.0f;
+	} else {
+		cam.ux = cam.uz = 0.0f;
+		cam.uy = 1.0f;
+	}
+
+	mat4_lookat(cam.xform, x, y, z, tx, ty, tz, cam.ux, cam.uy, cam.uz);
 }
 
 void csg_fov(float fov)
@@ -370,14 +388,15 @@ void csg_render_image(float *pixels, int width, int height)
 
 static void calc_primary_ray(struct ray *ray, int x, int y, int w, int h, float aspect)
 {
-	/* TODO */
 	ray->dx = aspect * ((float)x / (float)w * 2.0f - 1.0f);
 	ray->dy = 1.0f - (float)y / (float)h * 2.0f;
 	ray->dz = -1.0f / tan(cam.fov * 0.5f);
 
-	ray->x = cam.x;
-	ray->y = cam.y;
-	ray->z = cam.z;
+	ray->x = 0;
+	ray->y = 0;
+	ray->z = 0;
+
+	xform_ray(ray, cam.xform);
 }
 
 static int ray_trace(struct ray *ray, float *col)
@@ -423,7 +442,7 @@ static void shade(float *col, struct ray *ray, struct hit *hit)
 		sray.dy = ldir[1];
 		sray.dz = ldir[2];
 
-		if(!find_intersection(&sray, &tmphit) || tmphit.t > 1.0f) {
+		if(!find_intersection(&sray, &tmphit) || tmphit.t < 0.000001 || tmphit.t > 1.0f) {
 			if((len = sqrt(ldir[0] * ldir[0] + ldir[1] * ldir[1] + ldir[2] * ldir[2])) != 0.0f) {
 				float s = 1.0f / len;
 				ldir[0] *= s;

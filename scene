@@ -1,7 +1,8 @@
 # vi:set ts=4 sts=4 sw=4 ai:
+# test scene for the CSG raytracer
 csgray_scene {
 	viewer {
-		position = [0, 0, 5]
+		position = [0, 1, 5]
 		target = [0, 0, 0]
 		fov = 50
 	}

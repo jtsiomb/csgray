@@ -63,7 +63,10 @@ union csg_object {
 struct camera {
 	float x, y, z;
 	float tx, ty, tz;
+	float ux, uy, uz;
 	float fov;
+
+	float xform[16];
 };
 
 #endif	/* CSGIMPL_H_ */
