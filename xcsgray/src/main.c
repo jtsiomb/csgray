@@ -52,6 +52,10 @@ static struct resman *resman;
 
 int main(int argc, char **argv)
 {
+	if(argv[1]) {
+		fname = argv[1];
+	}
+
 	glutInit(&argc, argv);
 	glutInitWindowSize(800, 600);
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_SRGB);
