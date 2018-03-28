@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <resman.h>
 #include "csgray.h"
 #include "mainloop.h"
+#include "matrix.h"
 
 static int init(void);
 static void cleanup(void);
@@ -126,6 +127,8 @@ static void display(void)
 	pos[2] = cos(theta) * cos(phi) * cam_dist + cam_pos[2];
 
 	csg_view(pos[0], pos[1], pos[2], cam_pos[0], cam_pos[1], cam_pos[2]);
+	printf("viewer {\n\tposition = [%f, %f, %f]\n", pos[0], pos[1], pos[2]);
+	printf("\ttarget = [%f, %f, %f]\n}\n", cam_pos[0], cam_pos[1], cam_pos[2]);
 
 	csg_render_image(framebuf, win_width, win_height);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tex_width, tex_height, GL_RGB, GL_FLOAT, framebuf);
@@ -185,7 +188,6 @@ static void motion(int x, int y)
 		if(cam_phi > 90) cam_phi = 90;
 		post_redisplay();
 	}
-	/*
 	if(bnstate[1]) {
 		float right[3], up[3];
 		float panx = -dx * 0.01;
@@ -196,8 +198,8 @@ static void motion(int x, int y)
 
 		float cmat[16];
 		mat4_identity(cmat);
-		mat4_pre_rotate_x(phi);
-		mat4_pre_rotate_y(theta);
+		mat4_pre_rotate_x(cmat, -phi);
+		mat4_pre_rotate_y(cmat, -theta);
 
 		right[0] = panx;
 		right[1] = right[2] = 0.0f;
@@ -213,7 +215,6 @@ static void motion(int x, int y)
 
 		post_redisplay();
 	}
-	*/
 	if(bnstate[2]) {
 		cam_dist += dy * 0.1;
 
