@@ -34,6 +34,8 @@ enum {
 struct object {
 	int type;
 
+	char *name;
+
 	float r, g, b;
 	float emr, emg, emb;
 	float roughness;
@@ -93,5 +95,6 @@ struct camera {
 };
 
 int csg_dbg_pixel;
+int csg_dbg_pixel_x, csg_dbg_pixel_y;
 
 #endif	/* CSGIMPL_H_ */

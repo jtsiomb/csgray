@@ -171,6 +171,7 @@ int csg_remove_object(csg_object *o)
 void csg_free_object(csg_object *o)
 {
 	if(o) {
+		free(o->ob.name);
 		if(o->ob.destroy) {
 			o->ob.destroy(o);
 		}
@@ -346,6 +347,20 @@ void csg_ambient(float r, float g, float b)
 	ambient[2] = b;
 }
 
+void csg_name(csg_object *o, const char *name)
+{
+	free(o->ob.name);
+	o->ob.name = 0;
+
+	if(name) {
+		if(!(o->ob.name = malloc(strlen(name) + 1))) {
+			fprintf(stderr, "failed to allocate object name string\n");
+			abort();
+		}
+		strcpy(o->ob.name, name);
+	}
+}
+
 void csg_emission(csg_object *o, float r, float g, float b)
 {
 	o->ob.emr = r;
@@ -409,7 +424,12 @@ void csg_render_pixel(int x, int y, int width, int height, float aspect, float *
 {
 	struct ray ray;
 
-	csg_dbg_pixel = (x == 400 && y == 186);
+	if(csg_dbg_pixel_x > 0 && csg_dbg_pixel_x == x && csg_dbg_pixel_y == y) {
+		csg_dbg_pixel = 1;
+		csg_dbg_pixel_x = 0;
+	} else {
+		csg_dbg_pixel = 0;
+	}
 
 	calc_primary_ray(&ray, x, y, width, height, aspect);
 	ray_trace(&ray, color);
@@ -459,6 +479,7 @@ static int ray_trace(struct ray *ray, float *col)
 #define NULLXPOS(o)	((o)->ob.xform[12])
 #define NULLYPOS(o)	((o)->ob.xform[13])
 #define NULLZPOS(o)	((o)->ob.xform[14])
+static int dbg_in_shadow_ray;
 
 static void shade(float *col, struct ray *ray, struct hit *hit)
 {
@@ -468,6 +489,8 @@ static void shade(float *col, struct ray *ray, struct hit *hit)
 	float ldir[3], lcol[3], hdir[3];
 	struct ray sray;
 	struct hit tmphit;
+
+	dbg_in_shadow_ray = 1;
 
 	o = hit->o;
 	dcol[0] = ambient[0];
@@ -523,7 +546,7 @@ static void shade(float *col, struct ray *ray, struct hit *hit)
 				if((ndoth = hit->nx * hdir[0] + hit->ny * hdir[1] + hit->nz * hdir[2]) < 0.0f) {
 					ndoth = 0.0f;
 				}
-				spec = gloss * pow(ndoth, 100.0f * gloss);
+				spec = gloss * pow(ndoth, 128.0f * gloss);
 
 				if(o->ob.metallic) {
 					lcol[0] *= o->ob.r;
@@ -538,6 +561,8 @@ static void shade(float *col, struct ray *ray, struct hit *hit)
 
 		lt = lt->ob.plt_next;
 	}
+
+	dbg_in_shadow_ray = 0;
 
 	col[0] = dcol[0] + scol[0];
 	col[1] = dcol[1] + scol[1];
@@ -687,6 +712,8 @@ static csg_object *load_object(struct ts_node *node)
 		float z = o->ob.xform[14];
 		csg_lookat(o, x, y, z, avec[0], avec[1], avec[2], up[0], up[1], up[2]);
 	}
+
+	csg_name(o, ts_get_attr_str(node, "name", 0));
 
 	if((avec = ts_get_attr_vec(node, "color", 0))) {
 		csg_color(o, avec[0], avec[1], avec[2]);

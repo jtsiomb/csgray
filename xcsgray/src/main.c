@@ -29,6 +29,7 @@ static void cleanup(void);
 static void display(void);
 static void reshape(int x, int y);
 static void keydown(unsigned char key, int x, int y);
+static void skeydown(int key, int x, int y);
 static void mouse(int bn, int st, int x, int y);
 static void motion(int x, int y);
 
@@ -44,6 +45,7 @@ static const char *fname = "scene";
 
 static float cam_theta, cam_phi, cam_dist = 5;
 static float cam_pos[3];
+static float cam_orbit_pos[3];
 
 static int prev_x, prev_y;
 static int bnstate[8];
@@ -65,6 +67,7 @@ int main(int argc, char **argv)
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
 	glutKeyboardFunc(keydown);
+	glutSpecialFunc(skeydown);
 	glutMouseFunc(mouse);
 	glutMotionFunc(motion);
 
@@ -105,7 +108,6 @@ static void cleanup(void)
 
 static void display(void)
 {
-	float pos[3];
 	float theta, phi;
 
 	if(tex_width != win_width || tex_height != win_height) {
@@ -122,13 +124,11 @@ static void display(void)
 
 	theta = M_PI * cam_theta / 180.0f;
 	phi = M_PI * cam_phi / 180.0f;
-	pos[0] = -sin(theta) * cos(phi) * cam_dist + cam_pos[0];
-	pos[1] = sin(phi) * cam_dist + cam_pos[1];
-	pos[2] = cos(theta) * cos(phi) * cam_dist + cam_pos[2];
+	cam_orbit_pos[0] = -sin(theta) * cos(phi) * cam_dist + cam_pos[0];
+	cam_orbit_pos[1] = sin(phi) * cam_dist + cam_pos[1];
+	cam_orbit_pos[2] = cos(theta) * cos(phi) * cam_dist + cam_pos[2];
 
-	csg_view(pos[0], pos[1], pos[2], cam_pos[0], cam_pos[1], cam_pos[2]);
-	printf("viewer {\n\tposition = [%f, %f, %f]\n", pos[0], pos[1], pos[2]);
-	printf("\ttarget = [%f, %f, %f]\n}\n", cam_pos[0], cam_pos[1], cam_pos[2]);
+	csg_view(cam_orbit_pos[0], cam_orbit_pos[1], cam_orbit_pos[2], cam_pos[0], cam_pos[1], cam_pos[2]);
 
 	csg_render_image(framebuf, win_width, win_height);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tex_width, tex_height, GL_RGB, GL_FLOAT, framebuf);
@@ -161,14 +161,41 @@ static void keydown(unsigned char key, int x, int y)
 	switch(key) {
 	case 27:
 		exit(0);
+
+	case 'v':
+		printf("viewer {\n\tposition = [%f, %f, %f]\n", cam_orbit_pos[0], cam_orbit_pos[1], cam_orbit_pos[2]);
+		printf("\ttarget = [%f, %f, %f]\n}\n", cam_pos[0], cam_pos[1], cam_pos[2]);
+		break;
+	}
+}
+
+static int pick_debug_pixel;
+extern int csg_dbg_pixel_x, csg_dbg_pixel_y;
+
+static void skeydown(int key, int x, int y)
+{
+	switch(key) {
+	case GLUT_KEY_F1:
+		pick_debug_pixel = 1;
+		glutSetCursor(GLUT_CURSOR_CROSSHAIR);
+		break;
 	}
 }
 
 static void mouse(int bn, int st, int x, int y)
 {
-	bnstate[bn - GLUT_LEFT] = (st == GLUT_DOWN) ? 1 : 0;
+	int press = (st == GLUT_DOWN) ? 1 : 0;
+	bnstate[bn - GLUT_LEFT] = press;
 	prev_x = x;
 	prev_y = y;
+
+	if(pick_debug_pixel && !press) {
+		csg_dbg_pixel_x = x;
+		csg_dbg_pixel_y = y;
+		pick_debug_pixel = 0;
+		glutSetCursor(GLUT_CURSOR_LEFT_ARROW);
+		post_redisplay();
+	}
 }
 
 static void motion(int x, int y)

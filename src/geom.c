@@ -321,7 +321,7 @@ struct hinterv *ray_plane(struct ray *ray, csg_object *o)
 	hit->end[0].ny = hit->end[1].ny = o->plane.ny;
 	hit->end[0].nz = hit->end[1].nz = o->plane.nz;
 
-	hit->end[1].t = FLT_MAX;
+	hit->end[1].t = 10000.0f;
 	hit->end[1].x = ray->x + ray->dx * 10000.0f;
 	hit->end[1].y = ray->y + ray->dy * 10000.0f;
 	hit->end[1].z = ray->z + ray->dz * 10000.0f;
@@ -520,13 +520,13 @@ static struct hinterv *interval_isect(struct hinterv *a, struct hinterv *b)
 
 	if(a->end[0].t <= b->end[0].t && a->end[1].t >= b->end[1].t) {
 		/* B in A */
-		*res = *a;
+		*res = *b;
 		res->next = 0;
 		return res;
 	}
 	if(a->end[0].t > b->end[0].t && a->end[1].t < b->end[1].t) {
 		/* A in B */
-		*res = *b;
+		*res = *a;
 		res->next = 0;
 		return res;
 	}
@@ -554,8 +554,10 @@ static struct hinterv *interval_sub(struct hinterv *a, struct hinterv *b)
 	if(a->end[0].t < b->end[0].t && a->end[1].t > b->end[1].t) {
 		/* B in A */
 		res = alloc_hits(2);
+		res->o = a->o;
 		res->end[0] = a->end[0];
 		res->end[1] = b->end[0];
+		res->next->o = a->o;
 		res->next->end[0] = b->end[1];
 		res->next->end[1] = a->end[1];
 		return res;
@@ -571,15 +573,14 @@ static struct hinterv *interval_sub(struct hinterv *a, struct hinterv *b)
 	}
 
 	/* partial overlap */
+	res->o = a->o;
 	if(a->end[0].t <= b->end[0].t) {
 		res->end[0] = a->end[0];
 		res->end[1] = b->end[0];
 	} else {
 		res->end[0] = b->end[1];
+		flip_hit(res->end + 0);
 		res->end[1] = a->end[1];
 	}
-
-	flip_hit(res->end + 0);
-	flip_hit(res->end + 1);
 	return res;
 }

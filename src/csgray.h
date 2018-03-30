@@ -45,6 +45,8 @@ csg_object *csg_subtraction(csg_object *a, csg_object *b);
 
 void csg_ambient(float r, float g, float b);
 
+void csg_name(csg_object *o, const char *name);
+
 void csg_emission(csg_object *o, float r, float g, float b);
 void csg_color(csg_object *o, float r, float g, float b);
 void csg_roughness(csg_object *o, float r);
