@@ -20,3 +20,5 @@ To build the interactive variant `xcsgray`, change into xcsgray and type make.
 You'll need `freeglut`, and `libresman` which is used for automatic modification
 tracking and reloading of the scene description file. You can find it here:
 http://github.com/jtsiomb/libresman
+
+To cross-compile for windows, run `make CC=i686-w64-mingw32-gcc sys=mingw`

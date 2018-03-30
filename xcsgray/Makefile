@@ -1,5 +1,5 @@
 rootdir = ..
-src = $(wildcard src/*.c) $(wildcard src/unix/*.c) \
+src = $(wildcard src/*.c) \
 	  $(filter-out $(rootdir)/src/main.c, $(wildcard $(rootdir)/src/*.c))
 obj = $(src:.c=.o)
 dep = $(obj:.o=.d)
@@ -9,15 +9,21 @@ sys := $(shell uname -s | sed 's/MINGW32.*/mingw/')
 
 warn = -pedantic -Wall
 dbg = -g
-#opt = -O3 -ffast-math
+opt = -O3 -ffast-math
 inc = -Isrc -I$(rootdir)/src
 
 CFLAGS = $(warn) $(dbg) $(opt) $(inc) -fopenmp
-LDFLAGS = $(libgl_$(sys)) -lm -ltreestore -lresman -lgomp
+LDFLAGS = $(libgl) -lm -ltreestore -lresman -lpthread -lgomp
 
-libgl_Linux = -lGL -lglut
-libgl_Darwin = -framework OpenGL -framework GLUT
-libgl_mingw = -lopengl32 -lglut32
+ifeq ($(sys), mingw)
+	src += $(wildcard src/win32/*.c)
+	bin = xcsgray.exe
+	libgl = -lopengl32 -lfreeglut
+	LDFLAGS += -lwinmm
+else
+	src += $(wildcard src/unix/*.c)
+	libgl = -lGL -lglut
+endif
 
 $(bin): $(obj)
 	$(CC) -o $@ $(obj) $(LDFLAGS)

@@ -4,3 +4,5 @@
 csgray
 *.ppm
 xcsgray/xcsgray
+*.exe
+*.dll

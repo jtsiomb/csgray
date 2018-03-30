@@ -24,6 +24,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "mainloop.h"
 #include "matrix.h"
 
+#ifndef GL_FRAMEBUFFER_SRGB
+#define GL_FRAMEBUFFER_SRGB 0x8db9
+#endif
+#ifndef GL_RGB16F
+#define GL_RGB16F 0x881B
+#endif
+
 static int init(void);
 static void cleanup(void);
 static void display(void);
