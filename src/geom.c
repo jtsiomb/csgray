@@ -182,6 +182,7 @@ struct hinterv *ray_cylinder(struct ray *ray, csg_object *o)
 	float a, b, c, d, sqrt_d, t[2], sq_rad, tmp, y[2], hh, cap_t;
 	struct hinterv *hit;
 	struct ray locray = *ray;
+	float dirmat[16];
 
 	if(o->cyl.rad == 0.0f || o->cyl.height == 0.0f) {
 		return 0;
@@ -228,7 +229,7 @@ struct hinterv *ray_cylinder(struct ray *ray, csg_object *o)
 		t[1] = t[0];
 	}
 
-	if(ray_cylcap(ray, hh, o->cyl.rad, &cap_t)) {
+	if(ray_cylcap(&locray, hh, o->cyl.rad, &cap_t)) {
 		if(cap_t < t[0]) {
 			t[0] = cap_t;
 			t_is_cap[0] = 1;
@@ -240,7 +241,7 @@ struct hinterv *ray_cylinder(struct ray *ray, csg_object *o)
 			out[1] = 0;
 		}
 	}
-	if(ray_cylcap(ray, -hh, o->cyl.rad, &cap_t)) {
+	if(ray_cylcap(&locray, -hh, o->cyl.rad, &cap_t)) {
 		if(cap_t < t[0]) {
 			t[0] = cap_t;
 			t_is_cap[0] = -1;
@@ -257,10 +258,12 @@ struct hinterv *ray_cylinder(struct ray *ray, csg_object *o)
 		return 0;
 	}
 
+	mat4_copy(dirmat, o->ob.xform);
+	mat4_upper3x3(dirmat);
+
 	hit = alloc_hits(1);
 	hit->o = o;
 	for(i=0; i<2; i++) {
-		float c[3] = {0, 0, 0};
 		float x, y, z;
 
 		x = ray->x + ray->dx * t[i];
@@ -271,12 +274,13 @@ struct hinterv *ray_cylinder(struct ray *ray, csg_object *o)
 			hit->end[i].nx = hit->end[i].nz = 0.0f;
 			hit->end[i].ny = t_is_cap[i] > 0 ? 1.0f : -1.0f;
 		} else {
-			c[1] = locray.y + locray.dy * t[i];
-			mat4_xform3(c, o->ob.xform, c);
+			float lnorm[3];
 
-			hit->end[i].nx = (x - c[0]) / o->cyl.rad;
-			hit->end[i].ny = (y - c[1]) / o->cyl.rad;
-			hit->end[i].nz = (z - c[2]) / o->cyl.rad;
+			lnorm[0] = (locray.x + locray.dx * t[i]) / o->cyl.rad;
+			lnorm[1] = 0;
+			lnorm[2] = (locray.z + locray.dz * t[i]) / o->cyl.rad;
+
+			mat4_xform3(&hit->end[i].nx, dirmat, lnorm);
 		}
 
 		hit->end[i].t = t[i];

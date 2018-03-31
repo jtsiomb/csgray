@@ -404,6 +404,7 @@ void csg_translate(csg_object *o, float x, float y, float z)
 
 void csg_rotate(csg_object *o, float angle, float x, float y, float z)
 {
+	angle = M_PI * angle / 180.0f;
 	mat4_rotate(o->ob.xform, angle, x, y, z);
 	mat4_pre_rotate(o->ob.inv_xform, -angle, x, y, z);
 }
@@ -509,7 +510,7 @@ static void shade(float *col, struct ray *ray, struct hit *hit)
 		sray.dy = ldir[1];
 		sray.dz = ldir[2];
 
-		if(!find_intersection(&sray, &tmphit) || tmphit.t < 0.000001 || tmphit.t > 1.0f) {
+		if(!find_intersection(&sray, &tmphit) || tmphit.t < 0.00001 || tmphit.t > 1.0f) {
 			if((len = sqrt(ldir[0] * ldir[0] + ldir[1] * ldir[1] + ldir[2] * ldir[2])) != 0.0f) {
 				float s = 1.0f / len;
 				ldir[0] *= s;
@@ -567,6 +568,15 @@ static void shade(float *col, struct ray *ray, struct hit *hit)
 	col[0] = dcol[0] + scol[0];
 	col[1] = dcol[1] + scol[1];
 	col[2] = dcol[2] + scol[2];
+
+	len = sqrt(hit->nx * hit->nx + hit->ny * hit->ny + hit->nz * hit->nz);
+	hit->nx /= len;
+	hit->ny /= len;
+	hit->nz /= len;
+
+	col[0] = hit->nx * 0.5 + 0.5;
+	col[1] = hit->ny * 0.5 + 0.5;
+	col[2] = hit->nz * 0.5 + 0.5;
 }
 
 static void background(float *col, struct ray *ray)
