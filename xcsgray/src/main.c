@@ -105,6 +105,7 @@ static int init(void)
 	if(resman_add(resman, fname, 0) == -1) {
 		return -1;
 	}
+	resman_wait_all(resman);
 	return 0;
 }
 
@@ -116,6 +117,8 @@ static void cleanup(void)
 static void display(void)
 {
 	float theta, phi;
+
+	resman_poll(resman);
 
 	if(tex_width != win_width || tex_height != win_height) {
 		tex_width = win_width;
@@ -139,8 +142,6 @@ static void display(void)
 
 	csg_render_image(framebuf, win_width, win_height);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tex_width, tex_height, GL_RGB, GL_FLOAT, framebuf);
-
-	resman_poll(resman);
 
 	glBegin(GL_QUADS);
 	glTexCoord2f(0, 1);
@@ -172,6 +173,16 @@ static void keydown(unsigned char key, int x, int y)
 	case 'v':
 		printf("viewer {\n\tposition = [%f, %f, %f]\n", cam_orbit_pos[0], cam_orbit_pos[1], cam_orbit_pos[2]);
 		printf("\ttarget = [%f, %f, %f]\n}\n", cam_pos[0], cam_pos[1], cam_pos[2]);
+		break;
+
+	case 'd':
+		{
+			static int dbgsdr;
+
+			dbgsdr = !dbgsdr;
+			csg_shader(dbgsdr ? CSG_DEBUG_SHADER : CSG_DEFAULT_SHADER, 0);
+			post_redisplay();
+		}
 		break;
 	}
 }
@@ -269,7 +280,37 @@ static int load_func(const char *fname, int id, void *cls)
 
 static int done_func(int id, void *cls)
 {
+	static int once;
 	printf("done!\n");
+
+	if(!once) {
+		float dir[3], pos[3];
+		float rad;
+
+		csg_get_view_position(dir);
+		csg_get_view_target(pos);
+
+		dir[0] -= pos[0];
+		dir[1] -= pos[1];
+		dir[2] -= pos[2];
+
+		if((rad = sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2])) != 0.0f) {
+			dir[0] /= rad;
+			dir[1] /= rad;
+			dir[2] /= rad;
+
+			cam_theta = -atan2(dir[0], dir[2]) * 180.0 / M_PI;
+			cam_phi = asin(dir[1]) * 180.0 / M_PI;
+			cam_dist = rad;
+
+			cam_pos[0] = pos[0];
+			cam_pos[1] = pos[1];
+			cam_pos[2] = pos[2];
+		}
+
+		once = 1;
+	}
+
 	post_redisplay();
 	return 0;
 }

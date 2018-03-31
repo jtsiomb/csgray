@@ -68,7 +68,7 @@ void free_hit_list(struct hinterv *hit)
 	}
 }
 
-struct hinterv *ray_intersect(struct ray *ray, csg_object *o)
+struct hinterv *ray_intersect(csg_ray *ray, csg_object *o)
 {
 	switch(o->ob.type) {
 	case OB_SPHERE:
@@ -91,12 +91,12 @@ struct hinterv *ray_intersect(struct ray *ray, csg_object *o)
 	return 0;
 }
 
-struct hinterv *ray_sphere(struct ray *ray, csg_object *o)
+struct hinterv *ray_sphere(csg_ray *ray, csg_object *o)
 {
 	int i;
 	float a, b, c, d, sqrt_d, t[2], sq_rad, tmp;
 	struct hinterv *hit;
-	struct ray locray = *ray;
+	csg_ray locray = *ray;
 
 	if(o->sph.rad == 0.0f) {
 		return 0;
@@ -150,7 +150,7 @@ struct hinterv *ray_sphere(struct ray *ray, csg_object *o)
 	return hit;
 }
 
-static int ray_cylcap(struct ray *ray, float y, float rad, float *tres)
+static int ray_cylcap(csg_ray *ray, float y, float rad, float *tres)
 {
 	float ndotr, ndotv, vy, t;
 	float ny = y > 0.0f ? 1.0f : -1.0f;
@@ -176,12 +176,12 @@ static int ray_cylcap(struct ray *ray, float y, float rad, float *tres)
 	return 0;
 }
 
-struct hinterv *ray_cylinder(struct ray *ray, csg_object *o)
+struct hinterv *ray_cylinder(csg_ray *ray, csg_object *o)
 {
 	int i, out[2] = {0}, t_is_cap[2] = {0};
 	float a, b, c, d, sqrt_d, t[2], sq_rad, tmp, y[2], hh, cap_t;
 	struct hinterv *hit;
-	struct ray locray = *ray;
+	csg_ray locray = *ray;
 	float dirmat[16];
 
 	if(o->cyl.rad == 0.0f || o->cyl.height == 0.0f) {
@@ -292,11 +292,11 @@ struct hinterv *ray_cylinder(struct ray *ray, csg_object *o)
 	return hit;
 }
 
-struct hinterv *ray_plane(struct ray *ray, csg_object *o)
+struct hinterv *ray_plane(csg_ray *ray, csg_object *o)
 {
 	float vx, vy, vz, ndotv, ndotr, t;
 	struct hinterv *hit;
-	struct ray locray = *ray;
+	csg_ray locray = *ray;
 
 	xform_ray(&locray, o->ob.inv_xform);
 
@@ -334,14 +334,14 @@ struct hinterv *ray_plane(struct ray *ray, csg_object *o)
 
 #define BEXT(x)	((x) * 0.49999)
 
-struct hinterv *ray_box(struct ray *ray, csg_object *o)
+struct hinterv *ray_box(csg_ray *ray, csg_object *o)
 {
 	int i, sign[3];
 	float param[2][3];
 	float inv_dir[3];
 	float tmin, tmax, tymin, tymax, tzmin, tzmax;
 	struct hinterv *hit;
-	struct ray locray = *ray;
+	csg_ray locray = *ray;
 	float dirmat[16];
 
 	xform_ray(&locray, o->ob.inv_xform);
@@ -414,7 +414,7 @@ struct hinterv *ray_box(struct ray *ray, csg_object *o)
 	return hit;
 }
 
-struct hinterv *ray_csg_un(struct ray *ray, csg_object *o)
+struct hinterv *ray_csg_un(csg_ray *ray, csg_object *o)
 {
 	struct hinterv *hita, *hitb, *res;
 
@@ -430,7 +430,7 @@ struct hinterv *ray_csg_un(struct ray *ray, csg_object *o)
 	return res;
 }
 
-struct hinterv *ray_csg_isect(struct ray *ray, csg_object *o)
+struct hinterv *ray_csg_isect(csg_ray *ray, csg_object *o)
 {
 	struct hinterv *hita, *hitb, *res;
 
@@ -449,7 +449,7 @@ struct hinterv *ray_csg_isect(struct ray *ray, csg_object *o)
 	return res;
 }
 
-struct hinterv *ray_csg_sub(struct ray *ray, csg_object *o)
+struct hinterv *ray_csg_sub(csg_ray *ray, csg_object *o)
 {
 	struct hinterv *hita, *hitb, *res;
 
@@ -466,7 +466,7 @@ struct hinterv *ray_csg_sub(struct ray *ray, csg_object *o)
 }
 
 
-void xform_ray(struct ray *ray, float *mat)
+void xform_ray(csg_ray *ray, float *mat)
 {
 	float m3x3[16];
 
@@ -477,7 +477,7 @@ void xform_ray(struct ray *ray, float *mat)
 	mat4_xform3(&ray->dx, m3x3, &ray->dx);
 }
 
-static void flip_hit(struct hit *hit)
+static void flip_hit(csg_hit *hit)
 {
 	hit->nx = -hit->nx;
 	hit->ny = -hit->ny;

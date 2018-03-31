@@ -25,11 +25,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "matrix.h"
 #include "geom.h"
 
-static void calc_primary_ray(struct ray *ray, int x, int y, int w, int h, float aspect);
-static int ray_trace(struct ray *ray, float *col);
-static void shade(float *col, struct ray *ray, struct hit *hit);
-static void background(float *col, struct ray *ray);
-static int find_intersection(struct ray *ray, struct hit *best);
+static void calc_primary_ray(csg_ray *ray, int x, int y, int w, int h, float aspect);
+static void def_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls);
+static void dbg_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls);
+static void background(float *col, csg_ray *ray);
+static int find_intersection(csg_ray *ray, csg_hit *best);
 static csg_object *load_object(struct ts_node *node);
 
 static float ambient[3];
@@ -37,11 +37,15 @@ static struct camera cam;
 static csg_object *oblist;
 static csg_object *plights;
 
+static csg_shader_func_type shader;
+static void *shader_cls;
+
 int csg_init(void)
 {
 	oblist = 0;
 	plights = 0;
 
+	csg_shader(CSG_DEFAULT_SHADER, 0);
 	csg_ambient(0, 0, 0);
 	csg_view(0, 0, 5, 0, 0, 0);
 	csg_fov(50);
@@ -87,11 +91,56 @@ void csg_view(float x, float y, float z, float tx, float ty, float tz)
 	mat4_lookat(cam.xform, x, y, z, tx, ty, tz, cam.ux, cam.uy, cam.uz);
 }
 
+float *csg_get_view_position(float *pos)
+{
+	if(pos) {
+		pos[0] = cam.x;
+		pos[1] = cam.y;
+		pos[2] = cam.z;
+	}
+	return &cam.x;
+}
+
+float *csg_get_view_target(float *tgt)
+{
+	if(tgt) {
+		tgt[0] = cam.tx;
+		tgt[1] = cam.ty;
+		tgt[2] = cam.tz;
+	}
+	return &cam.tx;
+}
+
 void csg_fov(float fov)
 {
 	cam.fov = M_PI * fov / 180.0f;
 }
 
+float csg_get_fov(void)
+{
+	return 180.0f * cam.fov / M_PI;
+}
+
+void csg_shader(csg_shader_func_type sdr, void *cls)
+{
+	switch((unsigned long)sdr) {
+	case CSG_DEFAULT_SHADER_ID:
+		sdr = def_shader;
+		cls = 0;
+		break;
+
+	case CSG_DEBUG_SHADER_ID:
+		sdr = dbg_shader;
+		cls = 0;
+		break;
+
+	default:
+		break;
+	}
+
+	shader = sdr;
+	shader_cls = cls;
+}
 
 int csg_load(const char *fname)
 {
@@ -423,7 +472,7 @@ void csg_lookat(csg_object *o, float x, float y, float z, float tx, float ty, fl
 
 void csg_render_pixel(int x, int y, int width, int height, float aspect, float *color)
 {
-	struct ray ray;
+	csg_ray ray;
 
 	if(csg_dbg_pixel_x > 0 && csg_dbg_pixel_x == x && csg_dbg_pixel_y == y) {
 		csg_dbg_pixel = 1;
@@ -433,7 +482,7 @@ void csg_render_pixel(int x, int y, int width, int height, float aspect, float *
 	}
 
 	calc_primary_ray(&ray, x, y, width, height, aspect);
-	ray_trace(&ray, color);
+	csg_ray_trace(&ray, color);
 }
 
 void csg_render_image(float *pixels, int width, int height)
@@ -451,7 +500,56 @@ void csg_render_image(float *pixels, int width, int height)
 	}
 }
 
-static void calc_primary_ray(struct ray *ray, int x, int y, int w, int h, float aspect)
+int csg_ray_trace(csg_ray *ray, float *col)
+{
+	csg_hit hit;
+
+	if(!find_intersection(ray, &hit)) {
+		shader(col, ray, 0, shader_cls);
+		return 0;
+	}
+
+	shader(col, ray, &hit, shader_cls);
+	return 1;
+}
+
+int find_intersection(csg_ray *ray, csg_hit *best)
+{
+	int idx = 0;
+	csg_object *o;
+	struct hinterv *hit, *it;
+
+	best->t = FLT_MAX;
+	best->o = 0;
+
+	o = oblist;
+	while(o) {
+		if((hit = ray_intersect(ray, o))) {
+			it = hit;
+			while(it) {
+				if(it->end[0].t > 1e-6) {
+					idx = 0;
+					break;
+				}
+				if(it->end[1].t > 1e-6) {
+					idx = 1;
+					break;
+				}
+				it = it->next;
+			}
+
+			if(it && it->end[idx].t < best->t) {
+				*best = it->end[idx];
+			}
+		}
+		free_hit_list(hit);
+		o = o->ob.next;
+	}
+
+	return best->o != 0;
+}
+
+static void calc_primary_ray(csg_ray *ray, int x, int y, int w, int h, float aspect)
 {
 	ray->dx = aspect * ((float)x / (float)w * 2.0f - 1.0f);
 	ray->dy = 1.0f - (float)y / (float)h * 2.0f;
@@ -464,32 +562,25 @@ static void calc_primary_ray(struct ray *ray, int x, int y, int w, int h, float 
 	xform_ray(ray, cam.xform);
 }
 
-static int ray_trace(struct ray *ray, float *col)
-{
-	struct hit hit;
-
-	if(!find_intersection(ray, &hit)) {
-		background(col, ray);
-		return 0;
-	}
-
-	shade(col, ray, &hit);
-	return 1;
-}
 
 #define NULLXPOS(o)	((o)->ob.xform[12])
 #define NULLYPOS(o)	((o)->ob.xform[13])
 #define NULLZPOS(o)	((o)->ob.xform[14])
 static int dbg_in_shadow_ray;
 
-static void shade(float *col, struct ray *ray, struct hit *hit)
+static void def_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls)
 {
 	float ndotl, ndoth, len, falloff, spec;
 	csg_object *o, *lt = plights;
 	float dcol[3], scol[3] = {0};
 	float ldir[3], lcol[3], hdir[3];
-	struct ray sray;
-	struct hit tmphit;
+	csg_ray sray;
+	csg_hit tmphit;
+
+	if(!hit) {
+		background(col, ray);
+		return;
+	}
 
 	dbg_in_shadow_ray = 1;
 
@@ -573,52 +664,26 @@ static void shade(float *col, struct ray *ray, struct hit *hit)
 	hit->nx /= len;
 	hit->ny /= len;
 	hit->nz /= len;
+}
+
+
+static void dbg_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls)
+{
+	if(!hit) {
+		background(col, ray);
+		return;
+	}
 
 	col[0] = hit->nx * 0.5 + 0.5;
 	col[1] = hit->ny * 0.5 + 0.5;
 	col[2] = hit->nz * 0.5 + 0.5;
 }
 
-static void background(float *col, struct ray *ray)
+static void background(float *col, csg_ray *ray)
 {
 	col[0] = col[1] = col[2] = 0.0f;
 }
 
-static int find_intersection(struct ray *ray, struct hit *best)
-{
-	int idx = 0;
-	csg_object *o;
-	struct hinterv *hit, *it;
-
-	best->t = FLT_MAX;
-	best->o = 0;
-
-	o = oblist;
-	while(o) {
-		if((hit = ray_intersect(ray, o))) {
-			it = hit;
-			while(it) {
-				if(it->end[0].t > 1e-6) {
-					idx = 0;
-					break;
-				}
-				if(it->end[1].t > 1e-6) {
-					idx = 1;
-					break;
-				}
-				it = it->next;
-			}
-
-			if(it && it->end[idx].t < best->t) {
-				*best = it->end[idx];
-			}
-		}
-		free_hit_list(hit);
-		o = o->ob.next;
-	}
-
-	return best->o != 0;
-}
 
 static csg_object *load_object(struct ts_node *node)
 {
