@@ -59,6 +59,8 @@ static int bnstate[8];
 
 static struct resman *resman;
 
+static int use_dbg_sdr;
+
 
 int main(int argc, char **argv)
 {
@@ -176,13 +178,9 @@ static void keydown(unsigned char key, int x, int y)
 		break;
 
 	case 'd':
-		{
-			static int dbgsdr;
-
-			dbgsdr = !dbgsdr;
-			csg_shader(dbgsdr ? CSG_DEBUG_SHADER : CSG_DEFAULT_SHADER, 0);
-			post_redisplay();
-		}
+		use_dbg_sdr = !use_dbg_sdr;
+		csg_shader(use_dbg_sdr ? CSG_DEBUG_SHADER : CSG_DEFAULT_SHADER, 0);
+		post_redisplay();
 		break;
 	}
 }
@@ -274,6 +272,7 @@ static int load_func(const char *fname, int id, void *cls)
 
 	csg_destroy();
 	csg_init();
+	csg_shader(use_dbg_sdr ? CSG_DEBUG_SHADER : CSG_DEFAULT_SHADER, 0);
 
 	return csg_load(fname);
 }

@@ -265,23 +265,21 @@ struct hinterv *ray_cylinder(csg_ray *ray, csg_object *o)
 	hit->o = o;
 	for(i=0; i<2; i++) {
 		float x, y, z;
+		float lnorm[3];
 
 		x = ray->x + ray->dx * t[i];
 		y = ray->y + ray->dy * t[i];
 		z = ray->z + ray->dz * t[i];
 
 		if(t_is_cap[i]) {
-			hit->end[i].nx = hit->end[i].nz = 0.0f;
-			hit->end[i].ny = t_is_cap[i] > 0 ? 1.0f : -1.0f;
+			lnorm[0] = lnorm[2] = 0.0f;
+			lnorm[1] = t_is_cap[i] > 0 ? 1.0f : -1.0f;
 		} else {
-			float lnorm[3];
-
 			lnorm[0] = (locray.x + locray.dx * t[i]) / o->cyl.rad;
 			lnorm[1] = 0;
 			lnorm[2] = (locray.z + locray.dz * t[i]) / o->cyl.rad;
-
-			mat4_xform3(&hit->end[i].nx, dirmat, lnorm);
 		}
+		mat4_xform3(&hit->end[i].nx, dirmat, lnorm);
 
 		hit->end[i].t = t[i];
 		hit->end[i].x = x;
