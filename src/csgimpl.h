@@ -82,7 +82,7 @@ union csg_object {
 	struct cylinder cyl;
 	struct plane plane;
 	struct box box;
-	struct csgop un, isect, sub;
+	struct csgop csg;
 };
 
 struct camera {

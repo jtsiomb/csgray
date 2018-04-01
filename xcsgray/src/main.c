@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <math.h>
 #include <GL/freeglut.h>
 #include <resman.h>
+#include <pthread.h>
 #include "csgray.h"
 #include "mainloop.h"
 #include "matrix.h"
@@ -59,6 +60,8 @@ static int bnstate[8];
 
 static struct resman *resman;
 
+static pthread_mutex_t ready_lock = PTHREAD_MUTEX_INITIALIZER;
+static int ready;
 static int use_dbg_sdr;
 
 
@@ -107,7 +110,7 @@ static int init(void)
 	if(resman_add(resman, fname, 0) == -1) {
 		return -1;
 	}
-	resman_wait_all(resman);
+	/*resman_wait_all(resman);*/
 	return 0;
 }
 
@@ -121,6 +124,16 @@ static void display(void)
 	float theta, phi;
 
 	resman_poll(resman);
+
+	pthread_mutex_lock(&ready_lock);
+	if(!ready) {
+		pthread_mutex_unlock(&ready_lock);
+		glClearColor(0.4, 0.1, 0.1, 1);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glutSwapBuffers();
+		return;
+	}
+	pthread_mutex_unlock(&ready_lock);
 
 	if(tex_width != win_width || tex_height != win_height) {
 		tex_width = win_width;
@@ -268,6 +281,10 @@ static void motion(int x, int y)
 
 static int load_func(const char *fname, int id, void *cls)
 {
+	pthread_mutex_lock(&ready_lock);
+	ready = 0;
+	pthread_mutex_unlock(&ready_lock);
+
 	printf("loading %s\n", fname);
 
 	csg_destroy();
@@ -309,6 +326,8 @@ static int done_func(int id, void *cls)
 
 		once = 1;
 	}
+
+	ready = 1;
 
 	post_redisplay();
 	return 0;

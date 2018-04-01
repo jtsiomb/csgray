@@ -416,8 +416,8 @@ struct hinterv *ray_csg_un(csg_ray *ray, csg_object *o)
 {
 	struct hinterv *hita, *hitb, *res;
 
-	hita = ray_intersect(ray, o->un.a);
-	hitb = ray_intersect(ray, o->un.b);
+	hita = ray_intersect(ray, o->csg.a);
+	hitb = ray_intersect(ray, o->csg.b);
 
 	if(!hita) return hitb;
 	if(!hitb) return hita;
@@ -432,8 +432,8 @@ struct hinterv *ray_csg_isect(csg_ray *ray, csg_object *o)
 {
 	struct hinterv *hita, *hitb, *res;
 
-	hita = ray_intersect(ray, o->isect.a);
-	hitb = ray_intersect(ray, o->isect.b);
+	hita = ray_intersect(ray, o->csg.a);
+	hitb = ray_intersect(ray, o->csg.b);
 
 	if(!hita || !hitb) {
 		free_hit_list(hita);
@@ -451,10 +451,11 @@ struct hinterv *ray_csg_sub(csg_ray *ray, csg_object *o)
 {
 	struct hinterv *hita, *hitb, *res;
 
-	hita = ray_intersect(ray, o->un.a);
-	hitb = ray_intersect(ray, o->un.b);
+	if(!(hita = ray_intersect(ray, o->csg.a))) {
+		return 0;
+	}
 
-	if(!hita) return 0;
+	hitb = ray_intersect(ray, o->csg.b);
 	if(!hitb) return hita;
 
 	res = interval_sub(hita, hitb);

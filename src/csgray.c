@@ -29,7 +29,6 @@ static void calc_primary_ray(csg_ray *ray, int x, int y, int w, int h, float asp
 static void def_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls);
 static void dbg_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls);
 static void background(float *col, csg_ray *ray);
-static int find_intersection(csg_ray *ray, csg_hit *best);
 static csg_object *load_object(struct ts_node *node);
 
 static float ambient[3];
@@ -220,6 +219,10 @@ int csg_remove_object(csg_object *o)
 void csg_free_object(csg_object *o)
 {
 	if(o) {
+		if(o->ob.type == OB_UNION || o->ob.type == OB_INTERSECTION || o->ob.type == OB_SUBTRACTION) {
+			csg_free_object(o->csg.a);
+			csg_free_object(o->csg.b);
+		}
 		free(o->ob.name);
 		if(o->ob.destroy) {
 			o->ob.destroy(o);
@@ -360,8 +363,8 @@ csg_object *csg_union(csg_object *a, csg_object *b)
 	if(!(o = alloc_object(OB_UNION))) {
 		return 0;
 	}
-	o->un.a = a;
-	o->un.b = b;
+	o->csg.a = a;
+	o->csg.b = b;
 	return o;
 }
 
@@ -372,8 +375,8 @@ csg_object *csg_intersection(csg_object *a, csg_object *b)
 	if(!(o = alloc_object(OB_INTERSECTION))) {
 		return 0;
 	}
-	o->isect.a = a;
-	o->isect.b = b;
+	o->csg.a = a;
+	o->csg.b = b;
 	return o;
 }
 
@@ -384,8 +387,8 @@ csg_object *csg_subtraction(csg_object *a, csg_object *b)
 	if(!(o = alloc_object(OB_SUBTRACTION))) {
 		return 0;
 	}
-	o->sub.a = a;
-	o->sub.b = b;
+	o->csg.a = a;
+	o->csg.b = b;
 	return o;
 }
 
@@ -490,6 +493,8 @@ void csg_render_image(float *pixels, int width, int height)
 	int i, j;
 	float aspect = (float)width / (float)height;
 
+	printf("csg_render_image\n");
+
 #pragma omp parallel for private(j) schedule(dynamic, 32)
 	for(i=0; i<height; i++) {
 		float *pptr = pixels + i * width * 3;
@@ -504,7 +509,7 @@ int csg_ray_trace(csg_ray *ray, float *col)
 {
 	csg_hit hit;
 
-	if(!find_intersection(ray, &hit)) {
+	if(!csg_find_intersection(ray, &hit)) {
 		shader(col, ray, 0, shader_cls);
 		return 0;
 	}
@@ -513,7 +518,7 @@ int csg_ray_trace(csg_ray *ray, float *col)
 	return 1;
 }
 
-int find_intersection(csg_ray *ray, csg_hit *best)
+int csg_find_intersection(csg_ray *ray, csg_hit *best)
 {
 	int idx = 0;
 	csg_object *o;
@@ -541,8 +546,8 @@ int find_intersection(csg_ray *ray, csg_hit *best)
 			if(it && it->end[idx].t < best->t) {
 				*best = it->end[idx];
 			}
+			free_hit_list(hit);
 		}
-		free_hit_list(hit);
 		o = o->ob.next;
 	}
 
@@ -601,7 +606,7 @@ static void def_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls)
 		sray.dy = ldir[1];
 		sray.dz = ldir[2];
 
-		if(!find_intersection(&sray, &tmphit) || tmphit.t < 0.00001 || tmphit.t > 1.0f) {
+		if(!csg_find_intersection(&sray, &tmphit) || tmphit.t < 0.00001 || tmphit.t > 1.0f) {
 			if((len = sqrt(ldir[0] * ldir[0] + ldir[1] * ldir[1] + ldir[2] * ldir[2])) != 0.0f) {
 				float s = 1.0f / len;
 				ldir[0] *= s;
@@ -764,8 +769,8 @@ static csg_object *load_object(struct ts_node *node)
 		if(num_subobj != 2) {
 			goto err;
 		}
-		o->un.a = olist;
-		o->un.b = olist->ob.next;
+		o->csg.a = olist;
+		o->csg.b = olist->ob.next;
 		olist->ob.next = 0;
 	}
 
