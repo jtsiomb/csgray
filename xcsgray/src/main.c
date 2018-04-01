@@ -46,6 +46,7 @@ static int done_func(int id, void *cls);
 
 static int win_width = 800, win_height = 600;
 static int tex_width, tex_height;
+static int fb_srgb = 1;
 
 static float *framebuf;
 
@@ -73,7 +74,7 @@ int main(int argc, char **argv)
 
 	glutInit(&argc, argv);
 	glutInitWindowSize(800, 600);
-	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_SRGB);
+	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_SRGB | GLUT_MULTISAMPLE);
 	glutCreateWindow("xcsgray");
 
 	glutDisplayFunc(display);
@@ -94,7 +95,17 @@ int main(int argc, char **argv)
 
 static int init(void)
 {
+#ifdef GLUT_WINDOW_SRGB
+	if(glutGet(GLUT_WINDOW_SRGB)) {
+		glEnable(GL_FRAMEBUFFER_SRGB);
+	} else {
+		fb_srgb = 0;
+		fprintf(stderr, "Failed to get sRGB visual, falling back to manual gamma\n");
+	}
+#else
 	glEnable(GL_FRAMEBUFFER_SRGB);
+#endif
+
 	glEnable(GL_TEXTURE_2D);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -121,6 +132,7 @@ static void cleanup(void)
 
 static void display(void)
 {
+	int i;
 	float theta, phi;
 
 	resman_poll(resman);
@@ -156,6 +168,16 @@ static void display(void)
 	csg_view(cam_orbit_pos[0], cam_orbit_pos[1], cam_orbit_pos[2], cam_pos[0], cam_pos[1], cam_pos[2]);
 
 	csg_render_image(framebuf, win_width, win_height);
+
+	if(!fb_srgb) {
+		float inv_gamma = 1.0f / 2.2f;
+		int count = win_width * win_height * 3;
+#pragma omp parallel for
+		for(i=0; i<count; i++) {
+			float *ptr = framebuf + i;
+			*ptr = pow(*ptr, inv_gamma);
+		}
+	}
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tex_width, tex_height, GL_RGB, GL_FLOAT, framebuf);
 
 	glBegin(GL_QUADS);
