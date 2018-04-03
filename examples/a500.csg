@@ -1,0 +1,619 @@
+# vi:set ts=4 sts=4 sw=4 ai:
+csgray_scene {
+#	viewer {
+#		position = [-13.023557, 29.640249, 48.604572]
+#		target = [0, 0, 0]
+#	}
+	viewer {
+		position = [0.091562, 40.018719, 17.948357]
+		target = [0.091562, -1.206101, 3.753515]
+	}
+
+
+	null {
+		name = "light"
+		position = [-40, 60, 40]
+		emission = [400, 400, 400]
+	}
+	null {
+		name = "light2"
+		position = [50, 20, 20]
+		emission = [200, 200, 200]
+	}
+	null {
+		name = "light3"
+		position = [0, 5, -50]
+		emission = [100, 100, 100]
+	}
+	
+	cylinder {
+		name = "front bevel"
+		position = [0, 0.7, 16.3]
+		radius = 0.7
+		height = 45
+		rotaxis = [0, 0, 1]
+		rotangle = 90
+	}
+	sphere {
+		name = "front-left corner bevel"
+		position = [-22.5, 0.7, 16.3]
+		radius = 0.7
+	}
+	sphere {
+		name = "front-right corner bevel"
+		position = [22.5, 0.7, 16.3]
+		radius = 0.7
+	}
+
+
+	subtract {
+		union {
+
+			subtract {
+				subtract {
+					subtract {
+						subtract {
+							subtract {
+								# keyboard top and bevels
+								union {
+									union {
+										cylinder {
+											name = "left top bevel"
+											radius = 0.7
+											height = 17.5
+											position = [-22.5, 2.681, 7.782]	# z = 16.3 - 8.518
+											rotaxis = [1, 0, 0]
+											rotangle = -76.79	# 90 - 13.21
+										}
+										cylinder {
+											name = "right top bevel"
+											radius = 0.7
+											height = 17.5
+											position = [22.5, 2.681, 7.782]	# z = 16.3 - 8.518
+											rotaxis = [1, 0, 0]
+											rotangle = -76.79	# 90 - 13.21
+										}
+									}
+
+									box {
+										name = "kbface"
+										position = [0, 2.681, 7.782]
+										size = [45, 1.4, 17.5]
+										rotaxis = [1, 0, 0]
+										rotangle = 13.21
+									}
+								}
+								box {
+									name = "keywell numpad"
+									position = [18.35, 3, 8.366]
+									size = [7.9, 2, 11.7]
+									rotaxis = [1, 0, 0]
+									rotangle = 13.21
+								}
+							}
+							box {
+								name = "keywell main"
+								position = [-7.425, 3, 7.416]
+								size = [29.75, 2, 9.75]
+								rotaxis = [1, 0, 0]
+								rotangle = 13.21
+							}
+						}
+						box {
+							name = "keywell main bottom"
+							position = [-7.425, 1.7, 13.112]
+							size = [26.9, 2, 1.95]
+							rotaxis = [1, 0, 0]
+							rotangle = 13.21
+						}
+					}
+					box {
+						name = "keywell arrow bottom"
+						position = [11, 1.7, 13.112]
+						size = [5.9, 2, 1.95]
+						rotaxis = [1, 0, 0]
+						rotangle = 13.21
+					}
+				}
+				box {
+					name = "keywell arrow up"
+					position = [11, 1.8, 11.213]
+					size = [1.975, 2, 1.95]
+					rotaxis = [1, 0, 0]
+					rotangle = 13.21
+				}
+			}
+
+
+			subtract {
+				box {
+					name = "sideslant"
+					position = [0, 3.05, 0.2]
+					size = [46.4, 2.75, 3.5]
+					rotaxis = [1, 0, 0]
+					rotangle = 13.21
+				}
+				box {
+					position = [0, 2.5, 3.2]
+					size = [50, 3, 5]
+					rotaxis = [1, 0, 0]
+					rotangle = -65
+				}
+			}
+		}
+
+		box {
+			position = [0, 4, -2.3]
+			size = [50, 3, 5]
+			rotaxis = [1, 0, 0]
+			rotangle = -65
+		}
+	}
+
+
+	# top grill
+	subtract {
+		subtract {
+			subtract {
+				subtract {
+					subtract {
+						subtract {
+							subtract {
+								subtract {
+									subtract {
+										subtract {
+											subtract {
+												union {
+													subtract {
+														box {
+															name = "sidetrim"
+															position = [0, 2.53, -6.46]
+															size = [46.4, 2.2, 15]
+														}
+														box {
+															position = [0, 1, -14.55]
+															size = [44.5, 3, 3]
+														}
+													}
+
+													subtract {
+														subtract {
+															subtract {
+																subtract {
+																	subtract {
+																		subtract {
+																			subtract {
+																				box {
+																					name = "base"
+																					position = [0, 2.5, 1.3]
+																					size = [46, 5, 30]
+																				}
+
+																				box {
+																					name = "backsub"
+																						position = [0, 5, -13.5]
+																						size = [47, 4, 4]
+																						rotaxis = [1, 0, 0]
+																						rotangle = 20
+																				}
+																			}
+
+																			box {
+																				position = [0, 4.7, 8.782]
+																				size = [50, 5, 17]
+																				rotaxis = [1, 0, 0]
+																				rotangle = 13.21
+																			}
+																		}
+																		union {
+																			box {
+																				position = [-23.2, 3.3, 8.2]
+																				size = [1, 1, 17]
+																				rotaxis = [1, 0, 0]
+																				rotangle = 13.21
+																			}
+																			box {
+																				position = [23.2, 3.3, 8.2]
+																				size = [1, 1, 17]
+																				rotaxis = [1, 0, 0]
+																				rotangle = 13.21
+																			}
+																		}
+																	}
+
+																	union {
+																		box {
+																			position = [-23.3, 2, 1]
+																			size = [1, 5, 31]
+																			rotaxis = [0, 0, 1]
+																			rotangle = 8
+																		}
+																		box {
+																			position = [23.3, 2, 1]
+																			size = [1, 5, 31]
+																			rotaxis = [0, 0, 1]
+																			rotangle = -8
+																		}
+																	}
+																}
+
+																box {
+																	position = [0, 0.5, -14.9]
+																	size = [47, 3, 3]
+																	rotaxis = [1, 0, 0]
+																	rotangle = -25
+																}
+															}
+															box {
+																position = [0, 4, -15.1]
+																size = [47, 3, 3]
+																rotaxis = [1, 0, 0]
+																rotangle = 10 
+															}
+														}
+
+														box {
+															position = [0, 1, -14.55]
+															size = [44.5, 3, 3]
+														}
+													}
+												}
+
+												union {
+													union {
+														box {
+															position = [23, 2.6, -6]
+															size = [0.8, 0.2, 2.7]
+														}
+														box {
+															position = [23, 3.91, -5.87]
+															size = [0.8, 2.6, 2.7]
+															rotaxis = [1, 0, 0]
+															rotangle = 5 
+														}
+													}
+													box {
+														position = [23, 3.91, -6.15]
+														size = [0.8, 2.6, 2.7]
+														rotaxis = [1, 0, 0]
+														rotangle = -5 
+													}
+												}
+											}
+											box {
+												name = "floppy slot"
+												position = [21, 3.93, -6]
+												size = [5, 0.6, 9.6]
+											}
+										}
+
+										box { name = "topgrill0" position = [-1.4, 5.0, -5] size = [46, 1, 0.3] }
+									}
+									box { name = "topgrill1" position = [-1.4, 5.0, -5.5] size = [46, 1, 0.3] }
+								}
+								box { name = "topgrill2" position = [-1.4, 5.0, -6] size = [46, 1, 0.3] }
+							}
+							box { name = "topgrill3" position = [-1.4, 5.0, -6.5] size = [46, 1, 0.3] }
+						}
+						box { name = "topgrill4" position = [-1.4, 5.0, -7] size = [46, 1, 0.3] }
+					}
+					box { name = "topgrill5" position = [-1.4, 5.0, -7.5] size = [46, 1, 0.3] }
+				}
+				box { name = "topgrill6" position = [-1.4, 5.0, -8] size = [46, 1, 0.3] }
+			}
+			box { name = "topgrill7" position = [-1.4, 5.0, -8.5] size = [46, 1, 0.3] }
+		}
+		box { name = "topgrill8" position = [-1.4, 5.0, -9] size = [46, 1, 0.3] }
+	}
+
+	box {
+		name = "floppy button"
+		position = [23.3, 2.75, -9.4]
+		size = [0.5, 0.5, 1]
+	}
+
+	subtract {
+		box {
+			name = "back grill inner"
+			position = [0, 4, -12.46]
+			size = [45.5, 2, 2]
+			rotaxis = [1, 0, 0]
+			rotangle = 10
+		}
+		box {
+			position = [0, 5.05, -12.2]
+			size = [46, 0.75, 3]
+		}
+	}
+
+	# back grills
+	subtract {
+	 subtract {
+	  subtract {
+	   subtract {
+		subtract {
+		 subtract {
+		  subtract {
+		   subtract {
+			subtract {
+			 subtract {
+			  subtract {
+			   subtract {
+				subtract {
+				 subtract {
+				  subtract {
+				   subtract {
+					subtract {
+					 subtract {
+					  subtract {
+					   subtract {
+						subtract {
+						 subtract {
+						  subtract {
+						   subtract {
+							subtract {
+							 subtract {
+							  subtract {
+							   subtract {
+								subtract {
+								 subtract {
+								  subtract {
+								   subtract {
+									subtract {
+									 subtract {
+									  subtract {
+									   subtract {
+										subtract {
+										 subtract {
+										  subtract {
+										   subtract {
+											subtract {
+											 subtract {
+											  subtract {
+											   subtract {
+												subtract {
+												 subtract {
+												  subtract {
+												   subtract {
+													subtract {
+													 subtract {
+													  subtract {
+													   subtract {
+														subtract {
+														 subtract {
+														  subtract {
+														   subtract {
+															subtract {
+															 subtract {
+															  subtract {
+															   subtract {
+																subtract {
+																 subtract {
+																  subtract {
+																   subtract {
+																	subtract {
+																	 subtract {
+																	  subtract {
+																	   subtract {
+																		subtract {
+																		 subtract {
+																		  subtract {
+																		   subtract {
+																			subtract {
+																			 subtract {
+																			  subtract {
+																			   subtract {
+																				subtract {
+																				 subtract {
+																				  subtract {
+																				   subtract {
+																					subtract {
+																					 subtract {
+																					  subtract {
+																					   subtract {
+																						subtract {
+																						 subtract {
+																						  subtract {
+																						   subtract {
+																							subtract {
+																							 subtract {
+																							  subtract {
+																							   subtract {
+																								subtract {
+																								 box {
+																								  name = "back grill outer"
+																								  position = [0, 4.06, -12.6]
+																								  size = [45.15, 2, 2.2]
+																								  rotaxis = [1, 0, 0]
+																								  rotangle = 10
+																								 }
+																								 box {
+																								  position = [0, 5.25, -12.2]
+																								  size = [45.5, 0.75, 3]
+																								 }
+																								}
+																								box { position = [ -22.3 , 4, -12.5] size = [0.24, 3, 3] }
+																							   }
+																							   box { position = [ -21.8098901099 , 4, -12.5] size = [0.24, 3, 3] }
+																							  }
+																							  box { position = [ -21.3197802198 , 4, -12.5] size = [0.24, 3, 3] }
+																							 }
+																							 box { position = [ -20.8296703297 , 4, -12.5] size = [0.24, 3, 3] }
+																							}
+																							box { position = [ -20.3395604396 , 4, -12.5] size = [0.24, 3, 3] }
+																						   }
+																						   box { position = [ -19.8494505495 , 4, -12.5] size = [0.24, 3, 3] }
+																						  }
+																						  box { position = [ -19.3593406593 , 4, -12.5] size = [0.24, 3, 3] }
+																						 }
+																						 box { position = [ -18.8692307692 , 4, -12.5] size = [0.24, 3, 3] }
+																						}
+																						box { position = [ -18.3791208791 , 4, -12.5] size = [0.24, 3, 3] }
+																					   }
+																					   box { position = [ -17.889010989 , 4, -12.5] size = [0.24, 3, 3] }
+																					  }
+																					  box { position = [ -17.3989010989 , 4, -12.5] size = [0.24, 3, 3] }
+																					 }
+																					 box { position = [ -16.9087912088 , 4, -12.5] size = [0.24, 3, 3] }
+																					}
+																					box { position = [ -16.4186813187 , 4, -12.5] size = [0.24, 3, 3] }
+																				   }
+																				   box { position = [ -15.9285714286 , 4, -12.5] size = [0.24, 3, 3] }
+																				  }
+																				  box { position = [ -15.4384615385 , 4, -12.5] size = [0.24, 3, 3] }
+																				 }
+																				 box { position = [ -14.9483516484 , 4, -12.5] size = [0.24, 3, 3] }
+																				}
+																				box { position = [ -14.4582417582 , 4, -12.5] size = [0.24, 3, 3] }
+																			   }
+																			   box { position = [ -13.9681318681 , 4, -12.5] size = [0.24, 3, 3] }
+																			  }
+																			  box { position = [ -13.478021978 , 4, -12.5] size = [0.24, 3, 3] }
+																			 }
+																			 box { position = [ -12.9879120879 , 4, -12.5] size = [0.24, 3, 3] }
+																			}
+																			box { position = [ -12.4978021978 , 4, -12.5] size = [0.24, 3, 3] }
+																		   }
+																		   box { position = [ -12.0076923077 , 4, -12.5] size = [0.24, 3, 3] }
+																		  }
+																		  box { position = [ -11.5175824176 , 4, -12.5] size = [0.24, 3, 3] }
+																		 }
+																		 box { position = [ -11.0274725275 , 4, -12.5] size = [0.24, 3, 3] }
+																		}
+																		box { position = [ -10.5373626374 , 4, -12.5] size = [0.24, 3, 3] }
+																	   }
+																	   box { position = [ -10.0472527473 , 4, -12.5] size = [0.24, 3, 3] }
+																	  }
+																	  box { position = [ -9.55714285714 , 4, -12.5] size = [0.24, 3, 3] }
+																	 }
+																	 box { position = [ -9.06703296703 , 4, -12.5] size = [0.24, 3, 3] }
+																	}
+																	box { position = [ -8.57692307692 , 4, -12.5] size = [0.24, 3, 3] }
+																   }
+																   box { position = [ -8.08681318681 , 4, -12.5] size = [0.24, 3, 3] }
+																  }
+																  box { position = [ -7.5967032967 , 4, -12.5] size = [0.24, 3, 3] }
+																 }
+																 box { position = [ -7.10659340659 , 4, -12.5] size = [0.24, 3, 3] }
+																}
+																box { position = [ -6.61648351648 , 4, -12.5] size = [0.24, 3, 3] }
+															   }
+															   box { position = [ -6.12637362637 , 4, -12.5] size = [0.24, 3, 3] }
+															  }
+															  box { position = [ -5.63626373626 , 4, -12.5] size = [0.24, 3, 3] }
+															 }
+															 box { position = [ -5.14615384615 , 4, -12.5] size = [0.24, 3, 3] }
+															}
+															box { position = [ -4.65604395604 , 4, -12.5] size = [0.24, 3, 3] }
+														   }
+														   box { position = [ -4.16593406593 , 4, -12.5] size = [0.24, 3, 3] }
+														  }
+														  box { position = [ -3.67582417582 , 4, -12.5] size = [0.24, 3, 3] }
+														 }
+														 box { position = [ -3.18571428571 , 4, -12.5] size = [0.24, 3, 3] }
+														}
+														box { position = [ -2.6956043956 , 4, -12.5] size = [0.24, 3, 3] }
+													   }
+													   box { position = [ -2.20549450549 , 4, -12.5] size = [0.24, 3, 3] }
+													  }
+													  box { position = [ -1.71538461538 , 4, -12.5] size = [0.24, 3, 3] }
+													 }
+													 box { position = [ -1.22527472527 , 4, -12.5] size = [0.24, 3, 3] }
+													}
+													box { position = [ -0.735164835165 , 4, -12.5] size = [0.24, 3, 3] }
+												   }
+												   box { position = [ -0.245054945055 , 4, -12.5] size = [0.24, 3, 3] }
+												  }
+												  box { position = [ 0.245054945055 , 4, -12.5] size = [0.24, 3, 3] }
+												 }
+												 box { position = [ 0.735164835165 , 4, -12.5] size = [0.24, 3, 3] }
+												}
+												box { position = [ 1.22527472527 , 4, -12.5] size = [0.24, 3, 3] }
+											   }
+											   box { position = [ 1.71538461538 , 4, -12.5] size = [0.24, 3, 3] }
+											  }
+											  box { position = [ 2.20549450549 , 4, -12.5] size = [0.24, 3, 3] }
+											 }
+											 box { position = [ 2.6956043956 , 4, -12.5] size = [0.24, 3, 3] }
+											}
+											box { position = [ 3.18571428571 , 4, -12.5] size = [0.24, 3, 3] }
+										   }
+										   box { position = [ 3.67582417582 , 4, -12.5] size = [0.24, 3, 3] }
+										  }
+										  box { position = [ 4.16593406593 , 4, -12.5] size = [0.24, 3, 3] }
+										 }
+										 box { position = [ 4.65604395604 , 4, -12.5] size = [0.24, 3, 3] }
+										}
+										box { position = [ 5.14615384615 , 4, -12.5] size = [0.24, 3, 3] }
+									   }
+									   box { position = [ 5.63626373626 , 4, -12.5] size = [0.24, 3, 3] }
+									  }
+									  box { position = [ 6.12637362637 , 4, -12.5] size = [0.24, 3, 3] }
+									 }
+									 box { position = [ 6.61648351648 , 4, -12.5] size = [0.24, 3, 3] }
+									}
+									box { position = [ 7.10659340659 , 4, -12.5] size = [0.24, 3, 3] }
+								   }
+								   box { position = [ 7.5967032967 , 4, -12.5] size = [0.24, 3, 3] }
+								  }
+								  box { position = [ 8.08681318681 , 4, -12.5] size = [0.24, 3, 3] }
+								 }
+								 box { position = [ 8.57692307692 , 4, -12.5] size = [0.24, 3, 3] }
+								}
+								box { position = [ 9.06703296703 , 4, -12.5] size = [0.24, 3, 3] }
+							   }
+							   box { position = [ 9.55714285714 , 4, -12.5] size = [0.24, 3, 3] }
+							  }
+							  box { position = [ 10.0472527473 , 4, -12.5] size = [0.24, 3, 3] }
+							 }
+							 box { position = [ 10.5373626374 , 4, -12.5] size = [0.24, 3, 3] }
+							}
+							box { position = [ 11.0274725275 , 4, -12.5] size = [0.24, 3, 3] }
+						   }
+						   box { position = [ 11.5175824176 , 4, -12.5] size = [0.24, 3, 3] }
+						  }
+						  box { position = [ 12.0076923077 , 4, -12.5] size = [0.24, 3, 3] }
+						 }
+						 box { position = [ 12.4978021978 , 4, -12.5] size = [0.24, 3, 3] }
+						}
+						box { position = [ 12.9879120879 , 4, -12.5] size = [0.24, 3, 3] }
+					   }
+					   box { position = [ 13.478021978 , 4, -12.5] size = [0.24, 3, 3] }
+					  }
+					  box { position = [ 13.9681318681 , 4, -12.5] size = [0.24, 3, 3] }
+					 }
+					 box { position = [ 14.4582417582 , 4, -12.5] size = [0.24, 3, 3] }
+					}
+					box { position = [ 14.9483516484 , 4, -12.5] size = [0.24, 3, 3] }
+				   }
+				   box { position = [ 15.4384615385 , 4, -12.5] size = [0.24, 3, 3] }
+				  }
+				  box { position = [ 15.9285714286 , 4, -12.5] size = [0.24, 3, 3] }
+				 }
+				 box { position = [ 16.4186813187 , 4, -12.5] size = [0.24, 3, 3] }
+				}
+				box { position = [ 16.9087912088 , 4, -12.5] size = [0.24, 3, 3] }
+			   }
+			   box { position = [ 17.3989010989 , 4, -12.5] size = [0.24, 3, 3] }
+			  }
+			  box { position = [ 17.889010989 , 4, -12.5] size = [0.24, 3, 3] }
+			 }
+			 box { position = [ 18.3791208791 , 4, -12.5] size = [0.24, 3, 3] }
+			}
+			box { position = [ 18.8692307692 , 4, -12.5] size = [0.24, 3, 3] }
+		   }
+		   box { position = [ 19.3593406593 , 4, -12.5] size = [0.24, 3, 3] }
+		  }
+		  box { position = [ 19.8494505495 , 4, -12.5] size = [0.24, 3, 3] }
+		 }
+		 box { position = [ 20.3395604396 , 4, -12.5] size = [0.24, 3, 3] }
+		}
+		box { position = [ 20.8296703297 , 4, -12.5] size = [0.24, 3, 3] }
+	   }
+	   box { position = [ 21.3197802198 , 4, -12.5] size = [0.24, 3, 3] }
+	  }
+	  box { position = [ 21.8098901099 , 4, -12.5] size = [0.24, 3, 3] }
+	 }
+	 box { position = [ 22.3 , 4, -12.5] size = [0.24, 3, 3] }
+	}
+}

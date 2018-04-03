@@ -1,0 +1,80 @@
+# vi:set ts=4 sts=4 sw=4 ai:
+#
+# test scene for the CSG raytracer.
+#
+# Available objects:
+#  - null         not renderable, useful for point lights.
+#  - sphere       sphere around the origin (move with position attribute).
+#  - cylinder     vertical cylinder aligned with the Y axis (transform accordingly).
+#  - box          axis-aligned box (again use transformations to move/rotate as needed).
+#  - plane        plane ax + by + cz + d = 0 where a,b,c is the normal, and d is always 0.
+#  - union        CSG operation: union of two sub-objects.
+#  - intersect    CSG operation: intersection of two sub-objects.
+#  - subtract     CSG operation: first sub-object minus second sub-object.
+#
+# Common attributes for all objects:
+#  - position = [x, y, z]   position in world space.
+#  - scale = [x, y, z]      scaling along X, Y and Z axes.
+#  - rotaxis = [x, y, z]    axis of rotation.
+#  - rotangle = theta       angle in degrees.
+#  - color = [r, g, b]      base color of the object (albedo).
+#  - emission = [r, g, b]   amount of light emitted (RGB).
+#  - roughness = r          value from 0 to 1 inclusive.
+#  - metallic = m           1 for metallic objects, 0 for dielectrics.
+#
+# Sphere attributes:
+#  - radius = r             radius of the sphere.
+#
+# Cylinder attributes:
+#  - radius = r             radius of the cylinder.
+#  - height = h             height of the cylinder (along the Y axis).
+#
+# Box attributes:
+#  - size = [x, y, z]       dimensions of the box along three axes.
+#
+# Plane attributes:
+#  - normal = [x, y, z]     normal of the plane.
+#
+
+csgray_scene {
+	viewer {
+		position = [-2, 1.5, 5]
+		target = [0, 0, 0]
+		fov = 50
+	}
+
+	subtract {
+		subtract {
+			cylinder {
+				position = [0, 0, 0]
+				radius = 1
+				height = 2
+				color = [1, 0.1, 0.05]
+				roughness = 0.3
+			}
+			sphere {
+				position = [0.3, 0.7, 0.7]
+				radius = 0.7
+				color = [0.2, 0.3, 1]
+				roughness = 0.3
+			}
+		}
+		sphere {
+			position = [-0.9, -0.1, 0.7]
+			radius = 0.5
+			color = [1, 0.9, 0.2]
+			roughness = 0.3
+		}
+	}
+
+	plane {
+		position = [0, -1, 0]
+		normal = [0, 1, 0]
+		color = [0.4, 0.7, 0.4]
+	}
+
+	null {
+		position = [-4, 10, 10]
+		emission = [80, 80, 80]
+	}
+}

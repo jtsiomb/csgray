@@ -50,7 +50,7 @@ static int fb_srgb = 1;
 
 static float *framebuf;
 
-static const char *fname = "scene";
+static const char *fname = "scene.csg";
 
 static float cam_theta, cam_phi, cam_dist = 5;
 static float cam_pos[3];

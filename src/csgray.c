@@ -493,8 +493,6 @@ void csg_render_image(float *pixels, int width, int height)
 	int i, j;
 	float aspect = (float)width / (float)height;
 
-	printf("csg_render_image\n");
-
 #pragma omp parallel for private(j) schedule(dynamic, 32)
 	for(i=0; i<height; i++) {
 		float *pptr = pixels + i * width * 3;
