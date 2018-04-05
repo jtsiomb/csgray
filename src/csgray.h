@@ -94,8 +94,8 @@ void csg_rotate(csg_object *o, float angle, float x, float y, float z);
 void csg_scale(csg_object *o, float x, float y, float z);
 void csg_lookat(csg_object *o, float x, float y, float z, float tx, float ty, float tz, float ux, float uy, float uz);
 
-void csg_render_pixel(int x, int y, int width, int height, float aspect, float *color);
-void csg_render_image(float *pixels, int width, int height);
+void csg_render_pixel(int x, int y, int width, int height, float aspect, int sample, float *color);
+void csg_render_image(float *pixels, int width, int height, int sample);
 
 /* trace a single ray, invoke shaders, and return the color through the col pointer
  * returns non-zero if an intersection was found, 0 otherwise

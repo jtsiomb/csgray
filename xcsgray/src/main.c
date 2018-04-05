@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "csgray.h"
 #include "mainloop.h"
 #include "matrix.h"
+#include "ui.h"
 
 #ifndef GL_FRAMEBUFFER_SRGB
 #define GL_FRAMEBUFFER_SRGB 0x8db9
@@ -40,11 +41,13 @@ static void keydown(unsigned char key, int x, int y);
 static void skeydown(int key, int x, int y);
 static void mouse(int bn, int st, int x, int y);
 static void motion(int x, int y);
+static void redraw(void);
 
 static int load_func(const char *fname, int id, void *cls);
 static int done_func(int id, void *cls);
 
-static int win_width = 800, win_height = 600;
+int win_width = 800, win_height = 600;
+
 static int tex_width, tex_height;
 static int fb_srgb = 1;
 
@@ -65,6 +68,10 @@ static pthread_mutex_t ready_lock = PTHREAD_MUTEX_INITIALIZER;
 static int ready;
 static int use_dbg_sdr;
 
+static int render_pending = 1;
+static int max_samples = 1;
+static int sample;
+
 
 int main(int argc, char **argv)
 {
@@ -74,7 +81,7 @@ int main(int argc, char **argv)
 
 	glutInit(&argc, argv);
 	glutInitWindowSize(800, 600);
-	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_SRGB | GLUT_MULTISAMPLE);
+	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_SRGB);
 	glutCreateWindow("xcsgray");
 
 	glutDisplayFunc(display);
@@ -150,6 +157,7 @@ static void display(void)
 	if(tex_width != win_width || tex_height != win_height) {
 		tex_width = win_width;
 		tex_height = win_height;
+		printf("resizing texture: %dx%d\n", tex_width, tex_height);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, tex_width, tex_height, 0, GL_RGB, GL_FLOAT, 0);
 
 		framebuf = realloc(framebuf, win_width * win_height * 3 * sizeof *framebuf);
@@ -157,30 +165,36 @@ static void display(void)
 			fprintf(stderr, "failed to allocate framebuffer\n");
 			abort();
 		}
+		sample = 0;
 	}
 
-	theta = M_PI * cam_theta / 180.0f;
-	phi = M_PI * cam_phi / 180.0f;
-	cam_orbit_pos[0] = -sin(theta) * cos(phi) * cam_dist + cam_pos[0];
-	cam_orbit_pos[1] = sin(phi) * cam_dist + cam_pos[1];
-	cam_orbit_pos[2] = cos(theta) * cos(phi) * cam_dist + cam_pos[2];
+	if(render_pending) {
+		theta = M_PI * cam_theta / 180.0f;
+		phi = M_PI * cam_phi / 180.0f;
+		cam_orbit_pos[0] = -sin(theta) * cos(phi) * cam_dist + cam_pos[0];
+		cam_orbit_pos[1] = sin(phi) * cam_dist + cam_pos[1];
+		cam_orbit_pos[2] = cos(theta) * cos(phi) * cam_dist + cam_pos[2];
 
-	csg_view(cam_orbit_pos[0], cam_orbit_pos[1], cam_orbit_pos[2], cam_pos[0], cam_pos[1], cam_pos[2]);
+		csg_view(cam_orbit_pos[0], cam_orbit_pos[1], cam_orbit_pos[2], cam_pos[0], cam_pos[1], cam_pos[2]);
 
-	csg_render_image(framebuf, win_width, win_height);
+		csg_render_image(framebuf, win_width, win_height, sample);
 
-	if(!fb_srgb) {
-		float inv_gamma = 1.0f / 2.2f;
-		int count = win_width * win_height * 3;
+		if(!fb_srgb) {
+			float inv_gamma = 1.0f / 2.2f;
+			int count = win_width * win_height * 3;
 #pragma omp parallel for
-		for(i=0; i<count; i++) {
-			float *ptr = framebuf + i;
-			*ptr = pow(*ptr, inv_gamma);
+			for(i=0; i<count; i++) {
+				float *ptr = framebuf + i;
+				*ptr = pow(*ptr, inv_gamma);
+			}
 		}
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tex_width, tex_height, GL_RGB, GL_FLOAT, framebuf);
+		render_pending = 0;
+		++sample;
 	}
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tex_width, tex_height, GL_RGB, GL_FLOAT, framebuf);
 
 	glBegin(GL_QUADS);
+	glColor3f(1, 1, 1);
 	glTexCoord2f(0, 1);
 	glVertex2f(-1, -1);
 	glTexCoord2f(1, 1);
@@ -191,6 +205,14 @@ static void display(void)
 	glVertex2f(-1, 1);
 	glEnd();
 
+	if(sample < max_samples) {
+		post_redisplay();
+		render_pending = 1;
+
+		glColor3f(1, 1, 0);
+		glprintf(10, 10, "sample %d/%d", sample, max_samples);
+	}
+
 	glutSwapBuffers();
 }
 
@@ -199,6 +221,7 @@ static void reshape(int x, int y)
 	glViewport(0, 0, x, y);
 	win_width = x;
 	win_height = y;
+	render_pending = 1;
 }
 
 static void keydown(unsigned char key, int x, int y)
@@ -215,7 +238,41 @@ static void keydown(unsigned char key, int x, int y)
 	case 'd':
 		use_dbg_sdr = !use_dbg_sdr;
 		csg_shader(use_dbg_sdr ? CSG_DEBUG_SHADER : CSG_DEFAULT_SHADER, 0);
-		post_redisplay();
+		redraw();
+
+	case '=':
+		max_samples++;
+		printf("max samples: %d\n", max_samples);
+		redraw();
+		break;
+
+	case '-':
+		if(max_samples > 1) {
+			max_samples--;
+			printf("max samples: %d\n", max_samples);
+			redraw();
+		}
+		break;
+
+	case ']':
+		max_samples += 50;
+		printf("max samples: %d\n", max_samples);
+		redraw();
+		break;
+
+	case '[':
+		if(max_samples > 1) {
+			if(max_samples > 50) {
+				max_samples -= 50;
+			} else {
+				max_samples = 1;
+			}
+			printf("max samples: %d\n", max_samples);
+			redraw();
+		}
+		break;
+
+	default:
 		break;
 	}
 }
@@ -245,7 +302,7 @@ static void mouse(int bn, int st, int x, int y)
 		csg_dbg_pixel_y = y;
 		pick_debug_pixel = 0;
 		glutSetCursor(GLUT_CURSOR_LEFT_ARROW);
-		post_redisplay();
+		redraw();
 	}
 }
 
@@ -264,7 +321,7 @@ static void motion(int x, int y)
 
 		if(cam_phi < -90) cam_phi = -90;
 		if(cam_phi > 90) cam_phi = 90;
-		post_redisplay();
+		redraw();
 	}
 	if(bnstate[1]) {
 		float right[3], up[3];
@@ -291,14 +348,21 @@ static void motion(int x, int y)
 		cam_pos[1] += right[1] - up[1];
 		cam_pos[2] += right[2] - up[2];
 
-		post_redisplay();
+		redraw();
 	}
 	if(bnstate[2]) {
 		cam_dist += dy * 0.1;
 
 		if(cam_dist < 0) cam_dist = 0;
-		post_redisplay();
+		redraw();
 	}
+}
+
+static void redraw(void)
+{
+	sample = 0;
+	render_pending = 1;
+	post_redisplay();
 }
 
 static int load_func(const char *fname, int id, void *cls)
@@ -351,6 +415,6 @@ static int done_func(int id, void *cls)
 
 	ready = 1;
 
-	post_redisplay();
+	redraw();
 	return 0;
 }

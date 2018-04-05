@@ -25,7 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "matrix.h"
 #include "geom.h"
 
-static void calc_primary_ray(csg_ray *ray, int x, int y, int w, int h, float aspect);
+static void calc_primary_ray(csg_ray *ray, int x, int y, int w, int h, float aspect, int sample);
 static void def_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls);
 static void dbg_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls);
 static void background(float *col, csg_ray *ray);
@@ -473,7 +473,7 @@ void csg_lookat(csg_object *o, float x, float y, float z, float tx, float ty, fl
 	mat4_inv_lookat(o->ob.inv_xform, x, y, z, tx, ty, tz, ux, uy, uz);
 }
 
-void csg_render_pixel(int x, int y, int width, int height, float aspect, float *color)
+void csg_render_pixel(int x, int y, int width, int height, float aspect, int sample, float *color)
 {
 	csg_ray ray;
 
@@ -484,11 +484,21 @@ void csg_render_pixel(int x, int y, int width, int height, float aspect, float *
 		csg_dbg_pixel = 0;
 	}
 
-	calc_primary_ray(&ray, x, y, width, height, aspect);
-	csg_ray_trace(&ray, color);
+	calc_primary_ray(&ray, x, y, width, height, aspect, sample);
+	if(sample == 0) {
+		csg_ray_trace(&ray, color);
+	} else {
+		float c[3];
+		float w = 1.0f / (float)(sample + 1);
+		float wprev = w * (float)sample;
+		csg_ray_trace(&ray, c);
+		color[0] = color[0] * wprev + c[0] * w;
+		color[1] = color[1] * wprev + c[1] * w;
+		color[2] = color[2] * wprev + c[2] * w;
+	}
 }
 
-void csg_render_image(float *pixels, int width, int height)
+void csg_render_image(float *pixels, int width, int height, int sample)
 {
 	int i, j;
 	float aspect = (float)width / (float)height;
@@ -497,7 +507,7 @@ void csg_render_image(float *pixels, int width, int height)
 	for(i=0; i<height; i++) {
 		float *pptr = pixels + i * width * 3;
 		for(j=0; j<width; j++) {
-			csg_render_pixel(j, i, width, height, aspect, pptr);
+			csg_render_pixel(j, i, width, height, aspect, sample, pptr);
 			pptr += 3;
 		}
 	}
@@ -552,11 +562,18 @@ int csg_find_intersection(csg_ray *ray, csg_hit *best)
 	return best->o != 0;
 }
 
-static void calc_primary_ray(csg_ray *ray, int x, int y, int w, int h, float aspect)
+static void calc_primary_ray(csg_ray *ray, int x, int y, int w, int h, float aspect, int sample)
 {
 	ray->dx = aspect * ((float)x / (float)w * 2.0f - 1.0f);
 	ray->dy = 1.0f - (float)y / (float)h * 2.0f;
 	ray->dz = -1.0f / tan(cam.fov * 0.5f);
+
+	if(sample) {
+		float pw = 1.0f / w;
+		float ph = 1.0f / h;
+		ray->dx += ((float)rand() / (float)RAND_MAX - 0.5) * pw;
+		ray->dy += ((float)rand() / (float)RAND_MAX - 0.5) * ph;
+	}
 
 	ray->x = 0;
 	ray->y = 0;
