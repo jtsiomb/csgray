@@ -465,6 +465,107 @@ struct hinterv *ray_csg_sub(csg_ray *ray, csg_object *o)
 }
 
 
+void sample_object(csg_object *o, float *pos)
+{
+	switch(o->ob.type) {
+	case OB_SPHERE:
+		sample_sphere(o, pos);
+		break;
+	case OB_CYLINDER:
+		sample_cylinder(o, pos);
+		break;
+	case OB_PLANE:
+		sample_plane(o, pos);
+		break;
+	case OB_BOX:
+		sample_box(o, pos);
+		break;
+	case OB_UNION:
+		sample_csg_un(o, pos);
+		break;
+	case OB_INTERSECTION:
+		sample_csg_isect(o, pos);
+		break;
+	case OB_SUBTRACTION:
+		sample_csg_sub(o, pos);
+		break;
+
+	default:
+		pos[0] = o->ob.xform[12];
+		pos[1] = o->ob.xform[13];
+		pos[2] = o->ob.xform[14];
+	}
+}
+
+void sample_sphere(csg_object *o, float *pos)
+{
+	float u = (float)rand() / (float)RAND_MAX;
+	float v = (float)rand() / (float)RAND_MAX;
+
+	float theta = 2.0 * M_PI * u;
+	float phi = acos(2.0 * v - 1.0);
+
+	pos[0] = o->sph.rad * cos(theta) * sin(phi);
+	pos[1] = o->sph.rad * sin(theta) * sin(phi);
+	pos[2] = o->sph.rad * cos(phi);
+
+	mat4_xform3(pos, o->ob.xform, pos);
+}
+
+void sample_cylinder(csg_object *o, float *pos)
+{
+	float theta = 2.0 * M_PI * (float)rand() / RAND_MAX;
+	float r = sqrt((float)rand() / RAND_MAX) * o->cyl.rad;
+
+	pos[0] = cos(theta) * r;
+	pos[1] = (float)rand() / RAND_MAX * o->cyl.height - o->cyl.height / 2.0;
+	pos[2] = sin(theta) * r;
+
+	mat4_xform3(pos, o->ob.xform, pos);
+}
+
+/* pffffft */
+void sample_plane(csg_object *o, float *pos)
+{
+	pos[0] = o->ob.xform[12];
+	pos[1] = o->ob.xform[13];
+	pos[2] = o->ob.xform[14];
+}
+
+void sample_box(csg_object *o, float *pos)
+{
+	pos[0] = (float)rand() / (float)RAND_MAX * o->box.xsz;
+	pos[1] = (float)rand() / (float)RAND_MAX * o->box.ysz;
+	pos[2] = (float)rand() / (float)RAND_MAX * o->box.zsz;
+
+	mat4_xform3(pos, o->ob.xform, pos);
+}
+
+void sample_csg_un(csg_object *o, float *pos)
+{
+	/* TODO biased, maybe come up with a better plan */
+	if(rand() < RAND_MAX / 2) {
+		sample_object(o->csg.a, pos);
+	} else {
+		sample_object(o->csg.b, pos);
+	}
+}
+
+void sample_csg_isect(csg_object *o, float *pos)
+{
+	/* TODO */
+	pos[0] = o->ob.xform[12];
+	pos[1] = o->ob.xform[13];
+	pos[2] = o->ob.xform[14];
+}
+
+void sample_csg_sub(csg_object *o, float *pos)
+{
+	/* TODO nope */
+	sample_object(o->csg.a, pos);
+}
+
+
 void xform_ray(csg_ray *ray, float *mat)
 {
 	float m3x3[16];

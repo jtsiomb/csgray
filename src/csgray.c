@@ -193,7 +193,7 @@ void csg_add_object(csg_object *o)
 	o->ob.next = oblist;
 	oblist = o;
 
-	if(o->ob.type == OB_NULL && (o->ob.emr > 0.0f || o->ob.emg > 0.0f || o->ob.emb > 0.0f)) {
+	if(o->ob.emr > 0.0f || o->ob.emg > 0.0f || o->ob.emb > 0.0f) {
 		o->ob.plt_next = plights;
 		plights = o;
 	}
@@ -566,9 +566,6 @@ static void calc_primary_ray(csg_ray *ray, int x, int y, int w, int h, float asp
 }
 
 
-#define NULLXPOS(o)	((o)->ob.xform[12])
-#define NULLYPOS(o)	((o)->ob.xform[13])
-#define NULLZPOS(o)	((o)->ob.xform[14])
 static int dbg_in_shadow_ray;
 
 static void def_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls)
@@ -576,7 +573,7 @@ static void def_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls)
 	float ndotl, ndoth, len, falloff, spec;
 	csg_object *o, *lt = plights;
 	float dcol[3], scol[3] = {0};
-	float ldir[3], lcol[3], hdir[3];
+	float lpos[3], ldir[3], lcol[3], hdir[3];
 	csg_ray sray;
 	csg_hit tmphit;
 
@@ -588,14 +585,16 @@ static void def_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls)
 	dbg_in_shadow_ray = 1;
 
 	o = hit->o;
-	dcol[0] = ambient[0];
-	dcol[1] = ambient[1];
-	dcol[2] = ambient[2];
+	dcol[0] = ambient[0] + o->ob.emr;
+	dcol[1] = ambient[1] + o->ob.emg;
+	dcol[2] = ambient[2] + o->ob.emb;
 
 	while(lt) {
-		ldir[0] = NULLXPOS(lt) - hit->x;
-		ldir[1] = NULLYPOS(lt) - hit->y;
-		ldir[2] = NULLZPOS(lt) - hit->z;
+		sample_object(lt, lpos);
+
+		ldir[0] = lpos[0] - hit->x;
+		ldir[1] = lpos[1] - hit->y;
+		ldir[2] = lpos[2] - hit->z;
 
 		sray.x = hit->x;
 		sray.y = hit->y;
@@ -604,7 +603,7 @@ static void def_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls)
 		sray.dy = ldir[1];
 		sray.dz = ldir[2];
 
-		if(!csg_find_intersection(&sray, &tmphit) || tmphit.t < 0.00001 || tmphit.t > 1.0f) {
+		if(!csg_find_intersection(&sray, &tmphit) || tmphit.o == lt || tmphit.t < 0.00001 || tmphit.t > 1.0f) {
 			if((len = sqrt(ldir[0] * ldir[0] + ldir[1] * ldir[1] + ldir[2] * ldir[2])) != 0.0f) {
 				float s = 1.0f / len;
 				ldir[0] *= s;

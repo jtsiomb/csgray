@@ -43,6 +43,17 @@ struct hinterv *ray_csg_un(csg_ray *ray, csg_object *o);
 struct hinterv *ray_csg_isect(csg_ray *ray, csg_object *o);
 struct hinterv *ray_csg_sub(csg_ray *ray, csg_object *o);
 
+void sample_object(csg_object *o, float *pos);
+
+void sample_sphere(csg_object *o, float *pos);
+void sample_cylinder(csg_object *o, float *pos);
+void sample_plane(csg_object *o, float *pos);
+void sample_box(csg_object *o, float *pos);
+void sample_csg_un(csg_object *o, float *pos);
+void sample_csg_isect(csg_object *o, float *pos);
+void sample_csg_sub(csg_object *o, float *pos);
+
+
 void xform_ray(csg_ray *ray, float *mat);
 
 #endif	/* GEOM_H_ */
