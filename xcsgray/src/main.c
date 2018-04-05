@@ -255,15 +255,15 @@ static void keydown(unsigned char key, int x, int y)
 		break;
 
 	case ']':
-		max_samples += 50;
+		max_samples += 20;
 		printf("max samples: %d\n", max_samples);
 		redraw();
 		break;
 
 	case '[':
 		if(max_samples > 1) {
-			if(max_samples > 50) {
-				max_samples -= 50;
+			if(max_samples > 20) {
+				max_samples -= 20;
 			} else {
 				max_samples = 1;
 			}
