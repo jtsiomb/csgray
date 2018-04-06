@@ -520,9 +520,9 @@ void sample_plane(csg_object *o, float *pos)
 
 void sample_box(csg_object *o, float *pos)
 {
-	pos[0] = frand() * o->box.xsz;
-	pos[1] = frand() * o->box.ysz;
-	pos[2] = frand() * o->box.zsz;
+	pos[0] = (frand() - 0.5) * o->box.xsz;
+	pos[1] = (frand() - 0.5) * o->box.ysz;
+	pos[2] = (frand() - 0.5) * o->box.zsz;
 
 	mat4_xform3(pos, o->ob.xform, pos);
 }

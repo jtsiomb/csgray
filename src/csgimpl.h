@@ -46,6 +46,7 @@ struct object {
 
 	csg_object *next;
 	csg_object *plt_next;
+	int light_source;	/* emr > 0 || emg > 0 || emb > 0 */
 
 	void (*destroy)(csg_object*);
 };

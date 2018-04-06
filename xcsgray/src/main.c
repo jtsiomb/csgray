@@ -72,7 +72,7 @@ static int render_pending = 1;
 static int max_samples = 1;
 static int sample;
 
-static int def_sdr = CSG_DEFAULT_SHADER;
+static csg_shader_func_type def_sdr = CSG_DEFAULT_SHADER;
 
 
 int main(int argc, char **argv)
@@ -386,7 +386,7 @@ static int load_func(const char *fname, int id, void *cls)
 
 	csg_destroy();
 	csg_init();
-	csg_shader(use_dbg_sdr ? CSG_DEBUG_SHADER : CSG_DEFAULT_SHADER, 0);
+	csg_shader(use_dbg_sdr ? CSG_DEBUG_SHADER : def_sdr, 0);
 
 	return csg_load(fname);
 }

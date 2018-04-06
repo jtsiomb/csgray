@@ -23,6 +23,9 @@ typedef union csg_object csg_object;
 typedef struct csg_ray {
 	float x, y, z;
 	float dx, dy, dz;
+
+	int iter;
+	float energy;
 } csg_ray;
 
 typedef struct csg_hit {
@@ -44,8 +47,17 @@ enum {
 #define CSG_GI_SHADER		((csg_shader_func_type)CSG_GI_SHADER_ID)
 #define CSG_DEBUG_SHADER	((csg_shader_func_type)CSG_DEBUG_SHADER_ID)
 
+enum {
+	CSG_OPT_MAX_ITER,
+
+	CSG_NUM_OPTIONS
+};
+
 int csg_init(void);
 void csg_destroy(void);
+
+void csg_option(int opt, int val);
+int csg_get_option(int opt);
 
 /* set or query view parameters */
 void csg_view(float x, float y, float z, float tx, float ty, float tz);
@@ -104,9 +116,9 @@ void csg_render_pixel(int x, int y, int width, int height, float aspect, int sam
 void csg_render_image(float *pixels, int width, int height, int sample);
 
 /* trace a single ray, invoke shaders, and return the color through the col pointer
- * returns non-zero if an intersection was found, 0 otherwise
+ * returns the intersection distance, or 0 if no intersection was found
  */
-int csg_ray_trace(csg_ray *ray, float *col);
+float csg_ray_trace(csg_ray *ray, float *col);
 
 /* find the nearest ray intersection, and return hit details through the hit pointer
  * returns non-zero if an intersection was found, 0 otherwise
