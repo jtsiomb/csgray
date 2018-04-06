@@ -72,6 +72,8 @@ static int render_pending = 1;
 static int max_samples = 1;
 static int sample;
 
+static int def_sdr = CSG_DEFAULT_SHADER;
+
 
 int main(int argc, char **argv)
 {
@@ -235,10 +237,19 @@ static void keydown(unsigned char key, int x, int y)
 		printf("\ttarget = [%f, %f, %f]\n}\n", cam_pos[0], cam_pos[1], cam_pos[2]);
 		break;
 
+	case 'g':
+		def_sdr = def_sdr == CSG_DEFAULT_SHADER ? CSG_GI_SHADER : CSG_DEFAULT_SHADER;
+		if(!use_dbg_sdr) {
+			csg_shader(def_sdr, 0);
+		}
+		redraw();
+		break;
+
 	case 'd':
 		use_dbg_sdr = !use_dbg_sdr;
-		csg_shader(use_dbg_sdr ? CSG_DEBUG_SHADER : CSG_DEFAULT_SHADER, 0);
+		csg_shader(use_dbg_sdr ? CSG_DEBUG_SHADER : def_sdr, 0);
 		redraw();
+		break;
 
 	case '=':
 		max_samples++;

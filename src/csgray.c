@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <treestore.h>
 #include "csgimpl.h"
 #include "matrix.h"
+#include "mathutil.h"
 #include "geom.h"
 
 static void calc_primary_ray(csg_ray *ray, int x, int y, int w, int h, float aspect, int sample);
@@ -30,6 +31,8 @@ static void def_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls);
 static void dbg_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls);
 static void background(float *col, csg_ray *ray);
 static csg_object *load_object(struct ts_node *node);
+static void lambert_brdf_dir(float *norm, float *res);
+static void phong_brdf_dir(float *outdir, float *norm, float sexp, float *res);
 
 static float ambient[3];
 static struct camera cam;
@@ -38,6 +41,9 @@ static csg_object *plights;
 
 static csg_shader_func_type shader;
 static void *shader_cls;
+
+static int use_gi;
+
 
 int csg_init(void)
 {
@@ -125,6 +131,13 @@ void csg_shader(csg_shader_func_type sdr, void *cls)
 	switch((unsigned long)sdr) {
 	case CSG_DEFAULT_SHADER_ID:
 		sdr = def_shader;
+		use_gi = 0;
+		cls = 0;
+		break;
+
+	case CSG_GI_SHADER_ID:
+		sdr = def_shader;
+		use_gi = 1;
 		cls = 0;
 		break;
 
@@ -587,7 +600,7 @@ static int dbg_in_shadow_ray;
 
 static void def_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls)
 {
-	float ndotl, ndoth, len, falloff, spec;
+	float ndotl, ndoth, len, falloff, spec, gloss;
 	csg_object *o, *lt = plights;
 	float dcol[3], scol[3] = {0};
 	float lpos[3], ldir[3], lcol[3], hdir[3];
@@ -606,7 +619,14 @@ static void def_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls)
 	dcol[1] = ambient[1] + o->ob.emg;
 	dcol[2] = ambient[2] + o->ob.emb;
 
+	gloss = 1.0f - o->ob.roughness;
+
 	while(lt) {
+		if(lt == hit->o) {
+			lt = lt->ob.plt_next;
+			continue;
+		}
+
 		sample_object(lt, lpos);
 
 		ldir[0] = lpos[0] - hit->x;
@@ -642,8 +662,6 @@ static void def_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls)
 			dcol[2] += o->ob.b * lcol[2] * ndotl;
 
 			if(o->ob.roughness < 1.0f) {
-				float gloss = 1.0f - o->ob.roughness;
-
 				hdir[0] = ldir[0] - ray->dx;
 				hdir[1] = ldir[1] - ray->dy;
 				hdir[2] = ldir[2] - ray->dz;
@@ -679,12 +697,88 @@ static void def_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls)
 	col[1] = dcol[1] + scol[1];
 	col[2] = dcol[2] + scol[2];
 
-	len = sqrt(hit->nx * hit->nx + hit->ny * hit->ny + hit->nz * hit->nz);
-	hit->nx /= len;
-	hit->ny /= len;
-	hit->nz /= len;
+	/* global illumination */
+	if(use_gi) {
+		float rndval;
+		float gicol[3];
+		csg_ray giray;
+
+		giray.x = hit->x;
+		giray.y = hit->y;
+		giray.z = hit->z;
+
+		rndval = frand();
+		if(rndval < o->ob.roughness) {
+			/* diffuse interaction */
+			lambert_brdf_dir(&hit->nx, &giray.dx);
+
+			csg_ray_trace(&giray, gicol);
+			gicol[0] *= o->ob.r;
+			gicol[1] *= o->ob.g;
+			gicol[2] *= o->ob.b;
+
+		} else {
+			/* specular interaction */
+			phong_brdf_dir(&ray->dx, &hit->nx, 128.0f * gloss, &giray.dx);
+
+			csg_ray_trace(&giray, gicol);
+			if(o->ob.metallic) {
+				gicol[0] *= o->ob.r;
+				gicol[1] *= o->ob.g;
+				gicol[2] *= o->ob.b;
+			}
+		}
+
+		col[0] += gicol[0];
+		col[1] += gicol[1];
+		col[2] += gicol[2];
+	}
 }
 
+static void lambert_brdf_dir(float *norm, float *res)
+{
+	float rndval, dot;
+
+	do {
+		sphrand(1.0f, res);
+		dot = norm[0] * res[0] + norm[1] * res[1] + norm[2] * res[2];
+		rndval = frand();
+	} while(rndval > fabs(dot));
+
+	if(dot < 0.0f) {
+		res[0] = -res[0];
+		res[1] = -res[1];
+		res[2] = -res[2];
+	}
+}
+
+static void phong_brdf_dir(float *outdir, float *norm, float sexp, float *res)
+{
+	float refl[3];
+	float dot, phi, theta;
+	float xform[16];
+	float up[3] = {0, 1, 0};
+
+	dot = outdir[0] * norm[0] + outdir[1] * norm[1] + outdir[2] * norm[2];
+	refl[0] = -outdir[0] - norm[0] * dot * 2.0f;
+	refl[1] = -outdir[1] - norm[1] * dot * 2.0f;
+	refl[2] = -outdir[2] - norm[2] * dot * 2.0f;
+
+	phi = acos(pow(frand(), 1.0f / (sexp + 1)));
+	theta = 2.0 * M_PI * frand();
+
+	res[0] = cos(theta) * sin(phi);
+	res[1] = sin(theta) * sin(phi);
+	res[2] = cos(phi);
+
+	if(fabs(refl[1]) > 0.9) {
+		up[1] = 0.0f;
+		up[2] = 1.0f;
+	}
+
+	mat4_lookat(xform, 0, 0, 0, refl[0], refl[1], refl[2], up[0], up[1], up[2]);
+	mat4_xform3(res, xform, res);
+}
 
 static void dbg_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls)
 {

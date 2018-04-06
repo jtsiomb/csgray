@@ -34,9 +34,14 @@ typedef struct csg_hit {
 
 typedef void (*csg_shader_func_type)(float *col, csg_ray *ray, csg_hit *hit, void *cls);
 
-enum { CSG_DEFAULT_SHADER_ID, CSG_DEBUG_SHADER_ID };
+enum {
+	CSG_DEFAULT_SHADER_ID,
+	CSG_GI_SHADER_ID,
+	CSG_DEBUG_SHADER_ID = 16
+};
 
 #define CSG_DEFAULT_SHADER	((csg_shader_func_type)CSG_DEFAULT_SHADER_ID)
+#define CSG_GI_SHADER		((csg_shader_func_type)CSG_GI_SHADER_ID)
 #define CSG_DEBUG_SHADER	((csg_shader_func_type)CSG_DEBUG_SHADER_ID)
 
 int csg_init(void);
@@ -52,6 +57,7 @@ float csg_get_fov(void);
 /* Set the shader function used to calculate the color returned by each ray.
  * Pass the address of a custom shader function, or one of the pre-defined shaders:
  * - CSG_DEFAULT_SHADER: default photorealistic shader
+ * - CSG_GI_SHADER: default global illumination shader
  * - CSG_DEBUG_SHADER: debug shader using normals as colors
  *
  * The cls pointer will be passed to the shader function on every invocation.

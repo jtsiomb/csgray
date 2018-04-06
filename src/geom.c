@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <assert.h>
 #include "geom.h"
 #include "matrix.h"
+#include "mathutil.h"
 
 #define EPSILON		1e-6f
 
@@ -499,28 +500,13 @@ void sample_object(csg_object *o, float *pos)
 
 void sample_sphere(csg_object *o, float *pos)
 {
-	float u = (float)rand() / (float)RAND_MAX;
-	float v = (float)rand() / (float)RAND_MAX;
-
-	float theta = 2.0 * M_PI * u;
-	float phi = acos(2.0 * v - 1.0);
-
-	pos[0] = o->sph.rad * cos(theta) * sin(phi);
-	pos[1] = o->sph.rad * sin(theta) * sin(phi);
-	pos[2] = o->sph.rad * cos(phi);
-
+	sphrand(o->sph.rad, pos);
 	mat4_xform3(pos, o->ob.xform, pos);
 }
 
 void sample_cylinder(csg_object *o, float *pos)
 {
-	float theta = 2.0 * M_PI * (float)rand() / RAND_MAX;
-	float r = sqrt((float)rand() / RAND_MAX) * o->cyl.rad;
-
-	pos[0] = cos(theta) * r;
-	pos[1] = (float)rand() / RAND_MAX * o->cyl.height - o->cyl.height / 2.0;
-	pos[2] = sin(theta) * r;
-
+	cylrand(o->cyl.rad, o->cyl.height, pos);
 	mat4_xform3(pos, o->ob.xform, pos);
 }
 
@@ -534,9 +520,9 @@ void sample_plane(csg_object *o, float *pos)
 
 void sample_box(csg_object *o, float *pos)
 {
-	pos[0] = (float)rand() / (float)RAND_MAX * o->box.xsz;
-	pos[1] = (float)rand() / (float)RAND_MAX * o->box.ysz;
-	pos[2] = (float)rand() / (float)RAND_MAX * o->box.zsz;
+	pos[0] = frand() * o->box.xsz;
+	pos[1] = frand() * o->box.ysz;
+	pos[2] = frand() * o->box.zsz;
 
 	mat4_xform3(pos, o->ob.xform, pos);
 }
