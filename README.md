@@ -4,6 +4,8 @@ Simple CSG raytracer
 Just a simple CSG (Constructive Solid Geometry) raytracer. Takes text-based
 scene descriptions as input, and produces an image.
 
+![shots](http://nuclear.mutantstargoat.com/sw/misc/csgray_shots.jpg)
+
 License
 -------
 Copyright (C) 2018 John Tsiombikas <nuclear@member.fsf.org>
