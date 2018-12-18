@@ -56,7 +56,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	csg_render_image(pixels, width, height);
+	csg_render_image(pixels, width, height, 0);
 	save_image(out_fname, pixels, width, height);
 
 	csg_destroy();
