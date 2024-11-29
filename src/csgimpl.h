@@ -95,7 +95,7 @@ struct camera {
 	float xform[16];
 };
 
-int csg_dbg_pixel;
-int csg_dbg_pixel_x, csg_dbg_pixel_y;
+extern int csg_dbg_pixel;
+extern int csg_dbg_pixel_x, csg_dbg_pixel_y;
 
 #endif	/* CSGIMPL_H_ */

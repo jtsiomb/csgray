@@ -26,6 +26,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "mathutil.h"
 #include "geom.h"
 
+int csg_dbg_pixel;
+int csg_dbg_pixel_x, csg_dbg_pixel_y;
+
 static void calc_primary_ray(csg_ray *ray, int x, int y, int w, int h, float aspect, int sample);
 static void def_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls);
 static void dbg_shader(float *col, csg_ray *ray, csg_hit *hit, void *cls);

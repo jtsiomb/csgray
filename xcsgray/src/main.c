@@ -51,7 +51,7 @@ int win_width = 800, win_height = 600;
 static int tex_width, tex_height;
 static int fb_srgb = 1;
 
-static float *framebuf;
+static float *framebuf, *srgb_framebuf;
 
 static const char *fname = "scene.csg";
 
@@ -157,16 +157,18 @@ static void display(void)
 	pthread_mutex_unlock(&ready_lock);
 
 	if(tex_width != win_width || tex_height != win_height) {
+		long npixels;
 		tex_width = win_width;
 		tex_height = win_height;
 		printf("resizing texture: %dx%d\n", tex_width, tex_height);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, tex_width, tex_height, 0, GL_RGB, GL_FLOAT, 0);
 
-		framebuf = realloc(framebuf, win_width * win_height * 3 * sizeof *framebuf);
-		if(!framebuf) {
+		npixels = win_width * win_height;
+		if(!(framebuf = realloc(framebuf, npixels * (fb_srgb ? 3 : 6) * sizeof *framebuf))) {
 			fprintf(stderr, "failed to allocate framebuffer\n");
 			abort();
 		}
+		srgb_framebuf = fb_srgb ? 0 : framebuf + npixels * 3;
 		sample = 0;
 	}
 
@@ -186,11 +188,14 @@ static void display(void)
 			int count = win_width * win_height * 3;
 #pragma omp parallel for
 			for(i=0; i<count; i++) {
-				float *ptr = framebuf + i;
-				*ptr = pow(*ptr, inv_gamma);
+				float *src = framebuf + i;
+				float *dst = srgb_framebuf + i;
+				*dst = pow(*src, inv_gamma);
 			}
+			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tex_width, tex_height, GL_RGB, GL_FLOAT, srgb_framebuf);
+		} else {
+			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tex_width, tex_height, GL_RGB, GL_FLOAT, framebuf);
 		}
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tex_width, tex_height, GL_RGB, GL_FLOAT, framebuf);
 		render_pending = 0;
 		++sample;
 	}

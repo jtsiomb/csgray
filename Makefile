@@ -5,7 +5,7 @@ bin = csgray
 
 sys := $(shell uname -s | sed 's/MINGW32.*/mingw/')
 
-CFLAGS = -pedantic -Wall -g -O3 -fopenmp -fcommon
+CFLAGS = -pedantic -Wall -g -O3 -fopenmp
 LDFLAGS = -lm -ltreestore -lgomp
 
 ifeq ($(sys), mingw)
